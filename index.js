@@ -91,10 +91,6 @@ try {
     }
 
     console.log(newSiteData); //Передать в телегу (список обновленных курсов)
-
-
-
-
       
     //console.log(JSON.stringify(siteData));
     //Save data update in File
@@ -115,3 +111,6 @@ try {
     console.log('All Complete');
 }
 })();
+
+
+
