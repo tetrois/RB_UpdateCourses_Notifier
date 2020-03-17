@@ -1,13 +1,18 @@
+// apt-get -y --force-yes install make unzip g++ libssl-dev git xvfb x11-xkb-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic x11-apps clang libdbus-1-dev libgtk2.0-dev libnotify-dev libgnome-keyring-dev libgconf2-dev libasound2-dev libcap-dev libcups2-dev libxtst-dev libxss1 libnss3-dev gcc-multilib g++-multilib
+// Запускать на серваке с помощью команды xvfb-run node --harmony index.js
+//https://api.telegram.org/bot893111665:AAH8ITkQgb36--trJYEdtua2J7cp6ncowI8/getUpdates
+
+
 const Nightmare = require('nightmare');	
 const fs = require('fs');
+let http = require('request');
+const config = require('./config.json');
 
 
 (async ()=>{
 let nightmare; 
 try {
     console.log('Running...');
-
-    console.log('Read old stat data');
     let oldSiteData = {};
     fs.readFile('./test.txt', 'utf8', function (err, data) {
         
@@ -30,8 +35,8 @@ try {
 	nightmare = Nightmare({ show:false }); //openDevTools: { mode: 'detach' },
 	await nightmare
         .goto('https://rb.sberbank-school.ru/')
-        .insert('input.form__input.form__input--spaceright[name=user_login]','rb-support')
-        .insert('input.form__input.form__input--spaceright[name=password]','GhbdtnKjifhbrb123')
+        .insert('input.form__input.form__input--spaceright[name=user_login]', config.rb.login)
+        .insert('input.form__input.form__input--spaceright[name=password]', config.rb.password)
         .click('button.button')
         .wait(3000)
         .goto('https://rb.sberbank-school.ru/admin/courses?grid-1%5Bsort%5D%5Bname%5D=asc&grid-1%5Bper-page%5D=100')
@@ -41,15 +46,16 @@ try {
         let mainTableStat = document.querySelector('table.table')
         //console.log(mainTableStat);
         var arrObjects = [];
-        for (let i=1; i<mainTableStat.rows.length; i++) { //mainTableStat.rows.length
+        for (let i=1; i<5; i++) { //mainTableStat.rows.length
             arrObjects[i] = {
                 name:       mainTableStat.rows[i].cells[0].innerText,
-                id:         mainTableStat.rows[i].cells[1].innerText,
+                id:         mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/",28)),
                 idLink:     'https://rb.sberbank-school.ru/jsapi/backend/courses/' + +mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g,"") + '/migrations'
             }
         }
     	return arrObjects;
     });
+    console.log(siteData[3].id);
     console.log('[List Courses] -> Complete, Total: ' + siteData.length);
 
     for(let i=1; i<siteData.length; i++) { //siteData.length
@@ -69,7 +75,6 @@ try {
                 console.log("Bad Link =(");
             }
         });
-        //dateUpdate2.hasOwnProperty('data') ? console.log('[Parse] -> Good') : console.log('[Parse] -> Bad');
         Object.assign(siteData[i], dateUpdate2);
         
 
@@ -85,14 +90,19 @@ try {
         try {
         console.log("[Compare] -> " + a +') 1: ' + oldSiteData[a].name  + '  | Old version: ' +oldSiteData[a].id_update);
         console.log("[Compare] -> " + a +') 2: ' + siteData[a].name  + '  | New version: ' +siteData[a].id_update);
+        if (oldSiteData[a].id_update !== siteData[a].id_update) {
+            newSiteData.push(siteData[a]);
+        }
         } catch {
             console.log('[Compare] -> Name Not Found');
         }
     }
 
-    console.log(newSiteData); //Передать в телегу (список обновленных курсов)
-      
-    //console.log(JSON.stringify(siteData));
+    let msg = [];
+    for (let h = 0; h<newSiteData.length; h++) {
+        msg[h] = encodeURI('id: ' + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
+    }
+
     //Save data update in File
     console.log('[Save Data] -> Start');
     fs.writeFile("test.txt", JSON.stringify(siteData), function(err) {
@@ -101,6 +111,14 @@ try {
         }
     });
     console.log('[Save Data] -> Done');
+
+    if (msg.length !== 0){
+        for (let j=0;j<msg.length; j++)
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
+        
+    } else {
+        console.log("No Updates");
+    }
 
 	// последующая работа с данными
 } catch (error) {
@@ -111,6 +129,3 @@ try {
     console.log('All Complete');
 }
 })();
-
-
-
