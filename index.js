@@ -115,11 +115,13 @@ try {
     console.log('[Save Data] -> Done');
 
     if (msg.length !== 0){
-        for (let j=0;j<msg.length; j++){}
-        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
-        
+        for (let j=0;j<msg.length; j++){
+            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
+        }
     } else {
         console.log("No Updates");
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=444257931&parse_mode=html&text=NoUpdates`);
+
     }
 
 	// последующая работа с данными
