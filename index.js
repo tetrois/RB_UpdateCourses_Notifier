@@ -14,7 +14,7 @@ let nightmare;
 try {
     console.log('Running...');
     let oldSiteData = {};
-    fs.readFile('./test.txt', 'utf8', function (err, data) {
+    fs.readFile(config.file.oldData, 'utf8', function (err, data) {
         
         console.log('[Read Old Save Data] -> Start');
         if(err){
@@ -22,13 +22,10 @@ try {
             console.log(err);
         } else {
         
-        //console.log("123: " + data);
         oldSiteData = JSON.parse(data);
-        //console.log(oldSiteData[1].id_update);
         console.log('[Read Old Save Data] -> File Read Good =)');
         }
     });
-    //console.log(oldSiteData);
 
     
     console.log('[Login] -> Start');
@@ -73,6 +70,7 @@ try {
             } catch (error) {
                 console.error(error);
                 console.log("Bad Link =(");
+                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=444257931&parse_mode=html&text=BadLink`);
             }
         });
         Object.assign(siteData[i], dateUpdate2);
@@ -115,10 +113,10 @@ try {
     console.log('[Save Data] -> Done');
 
     if (msg.length !== 0){
-        for (let j=0;j<msg.length; j++){
+        for (let j=0;j<msg.length; j++)
             http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
-        }
-    } else {
+            console.log(msg[j]);
+        } else {
         console.log("No Updates");
         http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=444257931&parse_mode=html&text=NoUpdates`);
 
@@ -126,7 +124,9 @@ try {
 
 	// последующая работа с данными
 } catch (error) {
-	console.error(error);
+    console.error(error);
+    http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=444257931&parse_mode=html&text=Error`);
+
 	throw error;
 } finally {
     await nightmare.end();
