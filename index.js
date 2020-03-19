@@ -9,7 +9,7 @@ let http = require('request');
 const config = require('./config.json');
 
 
-(async ()=>{
+async function runParse(){
 let nightmare; 
 try {
     console.log('Running...');
@@ -46,7 +46,7 @@ try {
         let mainTableStat = document.querySelector('table.table')
         //console.log(mainTableStat);
         var arrObjects = [];
-        for (let i=1; i<5; i++) { //mainTableStat.rows.length
+        for (let i=1; i<mainTableStat.rows.length; i++) { //mainTableStat.rows.length
             arrObjects[i] = {
                 name:       mainTableStat.rows[i].cells[0].innerText,
                 id:         mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/",28)),
@@ -113,8 +113,8 @@ try {
     console.log('[Save Data] -> Done');
 
     if (msg.length !== 0){
-        for (let j=0;j<msg.length; j++)
-        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
+        for (let j=0;j<msg.length; j++){}
+        //http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
         
     } else {
         console.log("No Updates");
@@ -128,4 +128,8 @@ try {
     await nightmare.end();
     console.log('All Complete');
 }
-})();
+};
+
+runParse();
+setInterval(runParse, 60000);
+//ssh -i "nodeappkey.pem" ubuntu@ec2-15-188-86-141.eu-west-3.compute.amazonaws.com
