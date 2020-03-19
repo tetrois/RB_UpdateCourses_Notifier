@@ -131,5 +131,5 @@ try {
 };
 
 runParse();
-setInterval(runParse, 60000);
+setInterval(runParse, 3600000);
 //ssh -i "nodeappkey.pem" ubuntu@ec2-15-188-86-141.eu-west-3.compute.amazonaws.com
