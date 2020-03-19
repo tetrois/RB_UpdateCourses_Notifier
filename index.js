@@ -103,6 +103,8 @@ try {
         msg[h] = encodeURI('id: ' + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
     }
 
+    console.log('[New Courses] -> Courses updated: ' + msg.length);
+
     //Save data update in File
     console.log('[Save Data] -> Start');
     fs.writeFile("test.txt", JSON.stringify(siteData), function(err) {
