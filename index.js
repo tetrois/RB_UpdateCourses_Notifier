@@ -93,7 +93,7 @@ try {
         if (oldSiteData[a].id_update !== siteData[a].id_update) {
             newSiteData.push(siteData[a]);
         }
-        } catch {
+        } catch (error){
             console.log('[Compare] -> Name Not Found');
         }
     }
