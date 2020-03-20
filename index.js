@@ -104,9 +104,11 @@ async function runParse() {
         console.log('[Save Data] -> Done');
 
         if (msg.length !== 0) {
-            for (let j = 0; j < msg.length; j++)
+            for (let j = 0; j < msg.length; j++){
+                console.log(msg[j]);
                 http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
-
+                console.log("Have Update")
+            }
         } else {
             console.log("No Updates");
             http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=NoUpdates`);
@@ -125,4 +127,4 @@ async function runParse() {
     }
 };
 runParse();
-setInterval(runParse, 180000);
+setInterval(runParse, 1800000);
