@@ -5,11 +5,11 @@
 
 const Nightmare = require('nightmare');
 const fs = require('fs');
-let http = require('request');
+const http = require('request');
 const config = require('./config.json');
 
 
-(async () => {
+async function runParse() {
     let nightmare;
     try {
         console.log('Running...');
@@ -21,14 +21,10 @@ const config = require('./config.json');
                 console.log('[Read Old Save Data] -> Error =(');
                 console.log(err);
             } else {
-
-                //console.log("123: " + data);
                 oldSiteData = JSON.parse(data);
-                //console.log(oldSiteData[1].id_update);
                 console.log('[Read Old Save Data] -> File Read Good =)');
             }
         });
-        //console.log(oldSiteData);
 
 
         console.log('[Login] -> Start');
@@ -44,7 +40,6 @@ const config = require('./config.json');
         console.log('[List Courses] -> Start');
         let siteData = await nightmare.evaluate(function () {
             let mainTableStat = document.querySelector('table.table')
-            //console.log(mainTableStat);
             var arrObjects = [];
             for (let i = 1; i < mainTableStat.rows.length; i++) { //mainTableStat.rows.length
                 arrObjects[i] = {
@@ -76,12 +71,8 @@ const config = require('./config.json');
                 }
             });
             Object.assign(siteData[i], dateUpdate2);
-
-
-            //console.log(dateUpdate2);
         }
         console.log("[Parse] -> Done");
-        //console(dateUpdate2);
 
 
         console.log('[Compare] -> Start');
@@ -93,7 +84,7 @@ const config = require('./config.json');
                 if (oldSiteData[a].id_update !== siteData[a].id_update) {
                     newSiteData.push(siteData[a]);
                 }
-            } catch {
+            } catch (error){
                 console.log('[Compare] -> Name Not Found');
             }
         }
@@ -128,4 +119,6 @@ const config = require('./config.json');
         await nightmare.end();
         console.log('All Complete');
     }
-})();
+};
+runParse();
+setInterval(runParse, 180000);
