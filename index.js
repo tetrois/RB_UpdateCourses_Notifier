@@ -109,14 +109,18 @@ async function runParse() {
 
         } else {
             console.log("No Updates");
+            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=NoUpdates`);
+
         }
 
         // последующая работа с данными
     } catch (error) {
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=Error`);
         console.error(error);
         throw error;
     } finally {
         await nightmare.end();
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=AllComplete`);
         console.log('All Complete');
     }
 };

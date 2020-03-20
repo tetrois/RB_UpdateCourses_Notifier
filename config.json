@@ -1,7 +1,8 @@
 {
     "telegram": {
       "token": "893111665:AAH8ITkQgb36--trJYEdtua2J7cp6ncowI8",
-      "chat": "-1001181321704"
+      "chat": "-1001181321704",
+      "debugChat": "444257931"
     },
     "file": {
       "oldData": "./oldData.txt"
