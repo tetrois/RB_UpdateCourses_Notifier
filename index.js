@@ -109,7 +109,7 @@ async function runParse() {
         if (msg.length !== 0) {
             http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=Have%20Update${msg.length}`);
             for (let j = 0; j < msg.length; j++){
-                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=${msg[j]}`);
+                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
                 console.log("Have Update")
             }
         } else {
