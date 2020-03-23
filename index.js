@@ -20,6 +20,8 @@ async function runParse() {
             if (err) {
                 console.log('[Read Old Save Data] -> Error =(');
                 console.log(err);
+                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=%23Error\nRead%20Old%20Data%20Error`);
+
             } else {
                 oldSiteData = JSON.parse(data);
                 console.log('[Read Old Save Data] -> File Read Good =)');
@@ -30,12 +32,12 @@ async function runParse() {
         console.log('[Login] -> Start');
         nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' },
         await nightmare
-            .goto('https://rb.sberbank-school.ru/')
+            .goto(config.rb.mainLoginLink)
             .insert('input.form__input.form__input--spaceright[name=user_login]', config.rb.login)
             .insert('input.form__input.form__input--spaceright[name=password]', config.rb.password)
             .click('button.button')
             .wait(3000)
-            .goto('https://rb.sberbank-school.ru/admin/courses?grid-1%5Bsort%5D%5Bname%5D=asc&grid-1%5Bper-page%5D=100')
+            .goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
         console.log('[List Courses] -> Start');
         let siteData = await nightmare.evaluate(function () {
@@ -50,7 +52,6 @@ async function runParse() {
             }
             return arrObjects;
         });
-        console.log(siteData[3].id);
         console.log('[List Courses] -> Complete, Total: ' + siteData.length);
 
         for (let i = 1; i < siteData.length; i++) { //siteData.length
@@ -91,7 +92,7 @@ async function runParse() {
 
         let msg = [];
         for (let h = 0; h < newSiteData.length; h++) {
-            msg[h] = encodeURI('"#update\n"id: ' + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
+            msg[h] = "%23"+ encodeURI("update" + "\n" + "id: " + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
         }
 
         //Save data update in File
@@ -99,32 +100,34 @@ async function runParse() {
         fs.writeFile(config.file.oldData, JSON.stringify(siteData), function (err) {
             if (err) {
                 console.log('[Save Data] -> Error: ' + err);
+                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=%23Error\nSave%20Data%20Error`);
+
             }
         });
         console.log('[Save Data] -> Done');
 
         if (msg.length !== 0) {
+            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=Have%20Update${msg.length}`);
             for (let j = 0; j < msg.length; j++){
-                console.log(msg[j]);
-                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.chat}&parse_mode=html&text=${msg[j]}`);
+                http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=${msg[j]}`);
                 console.log("Have Update")
             }
         } else {
             console.log("No Updates");
-            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=NoUpdates`);
+            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=No%20Updates`);
 
         }
 
         // последующая работа с данными
     } catch (error) {
-        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=Error`);
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=%23Error\nError%20End`);
         console.error(error);
         throw error;
     } finally {
         await nightmare.end();
-        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=AllComplete`);
+        http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=All%20Complete`);
         console.log('All Complete');
     }
 };
 runParse();
-setInterval(runParse, 1800000);
+setInterval(runParse, config.interval);
