@@ -91,7 +91,7 @@ async function runParse() {
 
         let msg = [];
         for (let h = 0; h < newSiteData.length; h++) {
-            msg[h] = encodeURI('id: ' + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
+            msg[h] = encodeURI('"#update\n"id: ' + newSiteData[h].id + "\n" + "name: " + newSiteData[h].name + "\n" + "Date update: " + newSiteData[h].date_update);
         }
 
         //Save data update in File
