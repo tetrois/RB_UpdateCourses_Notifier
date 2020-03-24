@@ -1,8 +1,3 @@
-// apt-get -y --force-yes install make unzip g++ libssl-dev git xvfb x11-xkb-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic x11-apps clang libdbus-1-dev libgtk2.0-dev libnotify-dev libgnome-keyring-dev libgconf2-dev libasound2-dev libcap-dev libcups2-dev libxtst-dev libxss1 libnss3-dev gcc-multilib g++-multilib
-// Запускать на серваке с помощью команды xvfb-run node --harmony index.js
-//https://api.telegram.org/bot893111665:AAH8ITkQgb36--trJYEdtua2J7cp6ncowI8/getUpdates
-
-
 const Nightmare = require('nightmare');
 const fs = require('fs');
 const http = require('request');
@@ -47,7 +42,7 @@ async function runParse() {
                 arrObjects[i] = {
                     name: mainTableStat.rows[i].cells[0].innerText,
                     id: mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/", 28)),
-                    idLink: 'https://rb.sberbank-school.ru/jsapi/backend/courses/' + +mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "") + '/migrations'
+                    idLink: config.rb.jsapiListCourses + mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "") + '/migrations'
                 }
             }
             return arrObjects;
@@ -118,7 +113,6 @@ async function runParse() {
 
         }
 
-        // последующая работа с данными
     } catch (error) {
         http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${config.telegram.debugChat}&parse_mode=html&text=%23Error\nError%20End`);
         console.error(error);
