@@ -42,7 +42,7 @@ async function runParse() {
                 arrObjects[i] = {
                     name: mainTableStat.rows[i].cells[0].innerText,
                     id: mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/", 28)),
-                    idLink: config.rb.jsapiListCourses + mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "") + '/migrations'
+                    idLink: "https://rb.sberbank-school.ru/jsapi/backend/courses/" + mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "") + '/migrations'
                 }
             }
             return arrObjects;
