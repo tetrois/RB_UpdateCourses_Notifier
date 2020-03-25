@@ -1,4 +1,3 @@
 /node_modules/*
 /nodeappkey.pem
-/config.json
 /oldData.txt
