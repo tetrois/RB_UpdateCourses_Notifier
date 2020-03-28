@@ -1,3 +1,7 @@
 /node_modules/*
 /nodeappkey.pem
 /oldData.txt
+/updates_data
+listRelease.json
+390.json
+todayRelease.json
