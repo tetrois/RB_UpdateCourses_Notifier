@@ -17,7 +17,7 @@ async function runParse() {
         //let allTodayUpdates = [];
 
 
-        let nightmare = Nightmare({ show: false, openDevTools: { mode: 'detach' } }); //openDevTools: { mode: 'detach' }
+        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
 
 
         await login(nightmare);
@@ -38,23 +38,29 @@ async function runParse() {
     } catch (error) {
         console.log("[Parse] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, `runParse`), config.telegram.debugChat);
     } finally {
         console.log('All Complete');
+        sendMessageTG(['All%20Complete'], config.telegram.debugChat);
     }
 };
 
 //Получаем текущую дату и фоматируем ее в yyyy-mm-dd
 function getDate() {
-    let today = new Date();
-    let dd = today.getDate();
-    let mm = today.getMonth() + 1;
-    let yyyy = today.getFullYear();
-    dd = dd < 10 ? `0${dd}` : dd;
-    mm = mm < 10 ? `0${mm}` : mm;
-    let nowDate = yyyy + "-" + mm + "-" + dd;
-    console.log("Today is: " + nowDate);
-    return nowDate;
-    //return "2020-03-30";
+    try {
+        let today = new Date();
+        let dd = today.getDate();
+        let mm = today.getMonth() + 1;
+        let yyyy = today.getFullYear();
+        dd = dd < 10 ? `0${dd}` : dd;
+        mm = mm < 10 ? `0${mm}` : mm;
+        let nowDate = yyyy + "-" + mm + "-" + dd;
+        console.log("Today is: " + nowDate);
+        return nowDate;
+    } catch (error) {
+        console.error(error);
+        sendMessageTG(msgError(error, `getDate`), config.telegram.debugChat);
+    }
 };
 
 async function getFileData(fileName) {
@@ -63,9 +69,10 @@ async function getFileData(fileName) {
         let fileData = await JSON.parse(await fs.readFile(fileName, 'utf8'));
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
-    } catch (e) {
+    } catch (error) {
         console.log(`[Read Old Save Data] -> Error Read File ${fileName}`);
-        console.error(e);
+        console.error(error);
+        sendMessageTG(msgError(error, `getFileData ${fileName}`), config.telegram.debugChat);
         return fileData = {}
     }
 };
@@ -77,6 +84,7 @@ async function writeReleasesData(text, nowDate) {
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
+        sendMessageTG(msgError(error, "writeReleasesData"), config.telegram.debugChat);
     }
 }
 
@@ -87,6 +95,7 @@ async function writeData(text) {
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
+        sendMessageTG(msgError(error, "writeData"), config.telegram.debugChat);
     }
 }
 
@@ -94,8 +103,9 @@ async function getUpdateData(nowDate) {
     try {
         await fs.access(`./updates_data/${nowDate}.json`);
         return data = await getFileData(`./updates_data/${nowDate}.json`)
-    } catch (e) {
+    } catch (error) {
         console.log("[Read Releases Data] -> File used release not found. Will be using empty data.");
+        sendMessageTG(msgError(error, "getUpdateData"), config.telegram.debugChat);
         return data = { updates: {}, videorelease_id: {} };
     }
 }
@@ -112,9 +122,10 @@ async function login(nightmare) {
             .wait(3000)
         //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
-    } catch (e) {
+    } catch (error) {
         console.log("[Login] -> Error");
-        console.error(e);
+        console.error(error);
+        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
     }
 }
 
@@ -142,6 +153,7 @@ async function listCourses(nightmare) {
     } catch (error) {
         console.log("[List Courses] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "listCourses"), config.telegram.debugChat);
     }
 }
 
@@ -172,6 +184,7 @@ async function parseSiteData(siteData, nightmare) {
     } catch (error) {
         console.log("[Parse] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "parseSiteData"), config.telegram.debugChat);
     }
 }
 
@@ -204,6 +217,7 @@ async function parseReleaseData(nightmare, linkRelease, nowDate) {
     } catch (error) {
         console.log("[Parse Release] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "parseReleaseData"), config.telegram.debugChat);
     }
 }
 
@@ -223,6 +237,7 @@ async function getReleasesNames(nightmare, nowDate) {
     } catch (error) {
         console.log("[Parse Releases name] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "getReleasesNames"), config.telegram.debugChat);
     }
 }
 
@@ -273,6 +288,7 @@ function getUpdatedRelease(usedReleases, allTodayUpdates, listAllNames, nowDate)
     } catch (error) {
         console.log("[Get Upd Releases] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "getUpdatedRelease"), config.telegram.debugChat);
     }
 }
 
@@ -296,6 +312,7 @@ function compareData(siteData, oldSiteData) {
     } catch (error) {
         console.log("[Compare] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "compareData"), config.telegram.debugChat);
     }
 }
 
@@ -306,12 +323,15 @@ function createMessageCourses(newSiteData) {
         for (let h = 0; h < newSiteData.length; h++) {
             msg[h] = "%23"+ encodeURI(`updateTest\nid: ${newSiteData[h].id}\nname: ${newSiteData[h].name}\nDate update: ${newSiteData[h].date_update}`);
         }
-        sendMessageTG(msg, config.telegram.token, config.telegram.chatSupport);
+        sendMessageTG(msg, config.telegram.chatSupport);
+        sendMessageTG(msg, config.telegram.rbHelp);
+        sendMessageTG([`New%20courses%20 ${newSiteData.length}`], config.telegram.debugChat);
         console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
         return msg;
     } catch (error) {
         console.log("[Create Message] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "createMessageCourses"), config.telegram.debugChat);
     }
 }
 
@@ -323,20 +343,37 @@ function createMessageReleases(newReleases) {
         for (let key in newReleases) {
             msg[i++] = "%23" + encodeURI(`update\nid: /rb_videorelease\nname: ${newReleases[key].name}\nDate update: ${newReleases[key].crated_at}`);
         }
-        sendMessageTG(msg, config.telegram.token, config.telegram.chatSupport);
+        sendMessageTG(msg, config.telegram.chatSupport);
+        sendMessageTG(msg, config.telegram.rbHelp);
+        sendMessageTG([`New%20releases%20 ${msg.length}`], config.telegram.debugChat);
         console.log(`[Create Message R] -> Done. Count: ${msg.length}`);
         return msg;
     } catch (error) {
         console.log("[Create Message R] -> Error");
         console.error(error);
+        sendMessageTG(msgError(error, "createMessageReleases"), config.telegram.debugChat);
     }
 }
 
-function sendMessageTG(message, token, chat) {
-    for (let i=0; i<message.length; i++) {
-        //console.log(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
-        http.post(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+function sendMessageTG(message, chat) {
+    console.log("[Send Message] -> Start");
+    try {
+        for (let i = 0; i < message.length; i++) {
+            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+        }
+
+        console.log("[Send Message] -> Done");
+    } catch (error) {
+        console.log("[Send Message] -> Error");
+        console.error(error);
+        sendMessageTG(msgError(error, "sendMessageTG"), config.telegram.debugChat);
     }
+}
+
+function msgError(e, f) {
+    let msg = ["%23" + encodeURI(`error\nfunc: ${f}\nError text: ${e}`)];
+    console.log(msg);
+    return msg;
 }
 
 runParse();
