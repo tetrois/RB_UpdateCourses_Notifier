@@ -3,7 +3,7 @@
 Парсер данных с сайта и отправка их в телеграм через бота.
 
 
-npm install nightmare fs request
+npm install nightmare fs request forever
 
 Install on server
 
@@ -11,4 +11,4 @@ apt-get -y --force-yes install make unzip g++ libssl-dev git xvfb x11-xkb-utils 
 
 Run in server
 
-xvfb-run node --harmony index.js
+xvfb-run node --harmony app.js
