@@ -11,4 +11,4 @@ apt-get -y --force-yes install make unzip g++ libssl-dev git xvfb x11-xkb-utils 
 
 Run in server
 
-xvfb-run node --harmony app.js
+xvfb-run node --harmony app.js & disown %1
