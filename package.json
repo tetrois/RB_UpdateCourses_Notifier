@@ -1,8 +1,8 @@
 {
-  "name": "rbCourseUpdateNotifier",
+  "name": "rb_course_update_notifier",
   "version": "1.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
     "fs": "0.0.1-security",

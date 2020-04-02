@@ -7,27 +7,27 @@ const config = require('./config.json');
 async function runParse() {
     try {
         console.log('Running...');
-
+        
         let nowDate = getDate();//getDate();
 
         // let listReleasesName = await getFileData(config.debug.listReleasesName);
         // let migrationsData390 = await getFileData(config.debug.migrations);
         let oldSiteData = await getFileData(config.file.oldData);
         let usedReleases = await getUpdateData(nowDate);
+        makeUpdateFolder();
         //let allTodayUpdates = [];
 
 
         let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
 
-
         await login(nightmare);
         let siteData = await listCourses(nightmare);
         siteData = await parseSiteData(siteData, nightmare);
-        writeData(siteData);
         let newListCourses = compareData(siteData, oldSiteData);
         let todayMigrations = await parseReleaseData(nightmare, config.rb.idRelease, nowDate);
         let todayReleasesNames = await getReleasesNames(nightmare, nowDate);
         let newReleases = getUpdatedRelease(usedReleases, todayMigrations, todayReleasesNames, nowDate);
+        writeData(siteData);
         createMessageCourses(newListCourses);
         createMessageReleases(newReleases);
         // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
@@ -36,7 +36,7 @@ async function runParse() {
 
 
     } catch (error) {
-        console.log("[Parse] -> Error");
+        console.log("[Main] -> Error");
         console.error(error);
         sendMessageTG(msgError(error, `runParse`), config.telegram.debugChat);
     } finally {
@@ -366,7 +366,7 @@ function sendMessageTG(message, chat) {
     } catch (error) {
         console.log("[Send Message] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "sendMessageTG"), config.telegram.debugChat);
+        //sendMessageTG(msgError(error, "sendMessageTG"), config.telegram.debugChat);
     }
 }
 
@@ -374,6 +374,14 @@ function msgError(e, f) {
     let msg = ["%23" + encodeURI(`error\nfunc: ${f}\nError text: ${e}`)];
     console.log(msg);
     return msg;
+}
+async function makeUpdateFolder() {
+    try {
+        await fs.mkdir("./updates_data/");
+        console.log("Update folder create");
+    } catch (error) {
+        console.log("Update folder find");
+    }
 }
 
 runParse();
