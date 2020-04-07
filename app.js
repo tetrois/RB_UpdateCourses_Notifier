@@ -3,6 +3,8 @@ const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
 
+let messageSend = true;
+
 
 async function runParse() {
     try {
@@ -13,9 +15,11 @@ async function runParse() {
         // let listReleasesName = await getFileData(config.debug.listReleasesName);
         // let migrationsData390 = await getFileData(config.debug.migrations);
         let oldSiteData = await getFileData(config.file.oldData);
-        let usedReleases = await getUpdateData(nowDate);
+        console.log(messageSend);
+        let usedReleases = await getUpdateData(nowDate, "R");
+        //let usedExpress = await getUpdateData(nowDate, "E");
         makeUpdateFolder();
-        //let allTodayUpdates = [];
+        let allTodayUpdates = [];
 
 
         let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
@@ -28,7 +32,7 @@ async function runParse() {
         let todayReleasesNames = await getReleasesNames(nightmare, nowDate);
         let newReleases = getUpdatedRelease(usedReleases, todayMigrations, todayReleasesNames, nowDate);
         writeData(siteData);
-        createMessageCourses(newListCourses);
+        createMessageCourses(newListCourses, messageSend);
         createMessageReleases(newReleases);
         // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
         // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
@@ -71,15 +75,16 @@ async function getFileData(fileName) {
         return fileData;
     } catch (error) {
         console.log(`[Read Old Save Data] -> Error Read File ${fileName}`);
+        messageSend = false;
         console.error(error);
         sendMessageTG(msgError(error, `getFileData ${fileName}`), config.telegram.debugChat);
         return fileData = {}
     }
 };
 
-async function writeReleasesData(text, nowDate) {
+async function writeReleasesData(text, nowDate, type) {
     try {
-        await fs.writeFile(`./updates_data/${nowDate}.json`, JSON.stringify(text));
+        await fs.writeFile(`./updates_data/${type}${nowDate}.json`, JSON.stringify(text));
         console.log('[Save Data] -> Done');
     } catch (error) {
         console.log('[Save Data] -> Error: ');
@@ -99,10 +104,10 @@ async function writeData(text) {
     }
 }
 
-async function getUpdateData(nowDate) {
+async function getUpdateData(nowDate, type) {
     try {
-        await fs.access(`./updates_data/${nowDate}.json`);
-        return data = await getFileData(`./updates_data/${nowDate}.json`)
+        await fs.access(`./updates_data/${type}${nowDate}.json`);
+        return data = await getFileData(`./updates_data/${type}${nowDate}.json`)
     } catch (error) {
         console.log("[Read Releases Data] -> File used release not found. Will be using empty data.");
         sendMessageTG(msgError(error, "getUpdateData"), config.telegram.debugChat);
@@ -112,7 +117,7 @@ async function getUpdateData(nowDate) {
 
 //Login
 async function login(nightmare) {
-    try {
+    //try {
         console.log('[Login] -> Start');
         await nightmare
             .goto(config.rb.mainLoginLink)
@@ -122,11 +127,11 @@ async function login(nightmare) {
             .wait(3000)
         //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
-    } catch (error) {
-        console.log("[Login] -> Error");
-        console.error(error);
-        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
-    }
+    // } catch (error) {
+    //     console.log("[Login] -> Error");
+    //     console.error(error);
+    //     sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
+    // }
 }
 
 //List courses
@@ -138,11 +143,12 @@ async function listCourses(nightmare) {
             let mainTableStat = document.querySelector('table.table');
             let arrObjects = [];
             for (let i = 1; i < mainTableStat.rows.length; i++) { //mainTableStat.rows.length
-                if (mainTableStat.rows[i].innerText.indexOf("Основной курс для Видеорелизов") !== 0) {
+                if ((mainTableStat.rows[i].innerText.indexOf("Основной курс для Видеорелизов") !== 0) && (mainTableStat.rows[i].innerText.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
                     arrObjects[i] = {
                         name: mainTableStat.rows[i].cells[0].innerText,
                         id: mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/", 28)),
-                        idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "")}/migrations`
+                        idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "")}/migrations`,
+                        idCourse: mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "")
                     }
                 }
             }
@@ -263,26 +269,26 @@ function getUpdatedRelease(usedReleases, allTodayUpdates, listAllNames, nowDate)
                 };
 
                 for (let j = 0; j < listAllNames.data.length; j++) {
-                    if (usedReleases.videorelease_id.hasOwnProperty(listAllNames.data[j].videorelease_id)) {
+                    if (usedReleases.videorelease_id.hasOwnProperty(listAllNames.data[j].id)) {
                         continue;
                     } else {
                         usedReleases.updates[allTodayUpdates[i].id] = {
-                            videorelease_id: listAllNames.data[j].videorelease_id,
+                            videorelease_id: listAllNames.data[j].id,
                             name: listAllNames.data[j].name,
                             crated_at: allTodayUpdates[i].attributes.crated_at
                         };
                         newReleases[allTodayUpdates[i].id] = {
-                            videorelease_id: listAllNames.data[j].videorelease_id,
+                            videorelease_id: listAllNames.data[j].id,
                             name: listAllNames.data[j].name,
                             crated_at: allTodayUpdates[i].attributes.crated_at
                         };
-                        usedReleases.videorelease_id[listAllNames.data[j].videorelease_id] = { id_update: allTodayUpdates[i].id };
+                        usedReleases.videorelease_id[listAllNames.data[j].id] = { id_update: allTodayUpdates[i].id };
                         break;
                     }
                 }
             }
         }
-        writeReleasesData(usedReleases, nowDate);
+        writeReleasesData(usedReleases, nowDate, "R");
         console.log("[Get Upd Releases] -> Done");
         return newReleases;
     } catch (error) {
@@ -296,16 +302,27 @@ function compareData(siteData, oldSiteData) {
     try {
         console.log('[Compare] -> Start');
         let newSiteData = [];
-        for (let a = 0; a < siteData.length; a++) {
-            try {
-                console.log(`[Compare] -> ${a}) 1: ${oldSiteData[a].name}  | Old version: ${oldSiteData[a].id_update}`);
-                console.log(`[Compare] -> ${a}) 2: ${siteData[a].name}  | New version: ${siteData[a].id_update}`);
-                if (oldSiteData[a].id_update !== siteData[a].id_update) {
-                    newSiteData.push(siteData[a]);
+        if(siteData.length === oldSiteData.length) {
+            for (let a = 0; a < siteData.length; a++) {
+                try {
+                    if (oldSiteData[a].id === siteData[a].id) {
+                        console.log(`[Compare] -> ${a}) 1: ${oldSiteData[a].name}  | Old version: ${oldSiteData[a].id_update}`);
+                        console.log(`[Compare] -> ${a}) 2: ${siteData[a].name}  | New version: ${siteData[a].id_update}`);
+                        if (oldSiteData[a].id_update !== siteData[a].id_update) {
+                            newSiteData.push(siteData[a]);
+                        }
+                    } else {
+
+                    }
+                } catch (error) {
+                    console.log('[Compare] -> Name Not Found');
                 }
-            } catch (error) {
-                console.log('[Compare] -> Name Not Found');
             }
+        } else {
+            console.log('[Compare] -> Add new course');
+            messageSend = false;
+            sendMessageTG([`Add%20new%20course%20Total ${siteData.length}`], config.telegram.debugChat);
+            return siteData;
         }
         console.log('[Compare] -> Done');
         return newSiteData;
@@ -316,17 +333,20 @@ function compareData(siteData, oldSiteData) {
     }
 }
 
-function createMessageCourses(newSiteData) {
+function createMessageCourses(newSiteData, send) {
     try {
         console.log("[Create Message] -> Start");
         let msg = [];
-        for (let h = 0; h < newSiteData.length; h++) {
-            msg[h] = "%23"+ encodeURI(`updateTest\nid: ${newSiteData[h].id}\nname: ${newSiteData[h].name}\nDate update: ${newSiteData[h].date_update}`);
+        if (send){
+            for (let h = 0; h < newSiteData.length; h++) {
+                msg[h] = "%23"+ encodeURI(`update\nid: ${newSiteData[h].id}\nname: ${newSiteData[h].name}\nDate update: ${newSiteData[h].date_update}`);
+            }
+            sendMessageTG(msg, config.telegram.chatSupport);
+            sendMessageTG(msg, config.telegram.rbHelp);
+            sendMessageTG([`New%20courses%20 ${newSiteData.length}`], config.telegram.debugChat);
+            console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
         }
-        sendMessageTG(msg, config.telegram.chatSupport);
-        sendMessageTG(msg, config.telegram.rbHelp);
-        sendMessageTG([`New%20courses%20 ${newSiteData.length}`], config.telegram.debugChat);
-        console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
+        messageSend = true;
         return msg;
     } catch (error) {
         console.log("[Create Message] -> Error");
