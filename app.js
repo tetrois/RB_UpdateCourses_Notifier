@@ -71,6 +71,10 @@ async function getFileData(fileName) {
     try {
         await fs.access(fileName);
         let fileData = await JSON.parse(await fs.readFile(fileName, 'utf8'));
+        if (fileData === undefined) {
+            messageSend = false;
+            sendMessageTG("sendMessageOff", config.telegram.debugChat);
+        };//ПРОВЕРКУ НА КРИВОЙ ФАЙЛ
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
@@ -138,7 +142,7 @@ async function login(nightmare) {
 async function listCourses(nightmare) {
     try {
         console.log('[List Courses] -> Start');
-        nightmare.goto(config.rb.coursesListLink);
+        await nightmare.goto(config.rb.coursesListLink).wait(4000);
         let siteData = await nightmare.evaluate(function () {
             let mainTableStat = document.querySelector('table.table');
             let arrObjects = [];
@@ -379,7 +383,7 @@ function sendMessageTG(message, chat) {
     console.log("[Send Message] -> Start");
     try {
         for (let i = 0; i < message.length; i++) {
-            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+           http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
         }
 
         console.log("[Send Message] -> Done");
