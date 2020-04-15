@@ -172,7 +172,7 @@ async function parseSiteData(siteData, nightmare) {
         console.log("[Parse] -> Start");
         for (let i = 1; i < siteData.length; i++) { //siteData.length
             console.log(`[Parse] -> URL: ${siteData[i].idLink}`);
-            await nightmare.goto(siteData[i].idLink);
+            await nightmare.goto(siteData[i].idLink).wait(1000);
             let dateUpdate2 = {};
             dateUpdate2 = await nightmare.evaluate(function () {
                 try {
