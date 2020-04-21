@@ -3,7 +3,7 @@
 Парсер данных с сайта и отправка их в телеграм через бота.
 
 
-npm install nightmare fs request forever
+npm install nightmare fs request
 
 Install on server
 
