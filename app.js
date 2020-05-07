@@ -170,7 +170,7 @@ async function listCourses(nightmare) {
 async function parseSiteData(siteData, nightmare) {
     try {
         console.log("[Parse] -> Start");
-        for (let i = 1; i < siteData.length; i++) { //siteData.length
+        for (let i = 0; i < siteData.length; i++) { //siteData.length
             console.log(`[Parse] -> URL: ${siteData[i].idLink}`);
             await nightmare.goto(siteData[i].idLink).wait(1000);
             let dateUpdate2 = {};
