@@ -10,7 +10,9 @@
     "request": "^2.88.2",
     "xmlhttprequest": "^1.8.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "electron": "^9.0.5"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "xvfb-run node --harmony app.js & disown %1"

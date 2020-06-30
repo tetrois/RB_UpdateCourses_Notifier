@@ -22,7 +22,8 @@ async function runParse() {
         let allTodayUpdates = [];
 
 
-        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
+        let nightmare = Nightmare({ show: true }); //openDevTools: { mode: 'detach' }
+        nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
 
         await login(nightmare);
         let siteData = await listCourses(nightmare);
@@ -34,6 +35,7 @@ async function runParse() {
         writeData(siteData);
         createMessageCourses(newListCourses, messageSend);
         createMessageReleases(newReleases);
+
         // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
         // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
         await nightmare.end();
@@ -125,10 +127,11 @@ async function login(nightmare) {
         console.log('[Login] -> Start');
         await nightmare
             .goto(config.rb.mainLoginLink)
-            .insert('input.form__input.form__input--spaceright[name=user_login]', config.rb.login)
-            .insert('input.form__input.form__input--spaceright[name=password]', config.rb.password)
+            .insert('[name=login]', config.rb.login)
+            .insert('[name=password]', config.rb.password)
             .click('button.button')
-            .wait(3000)
+            .wait(2000)
+            
         //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
     // } catch (error) {
@@ -142,7 +145,7 @@ async function login(nightmare) {
 async function listCourses(nightmare) {
     try {
         console.log('[List Courses] -> Start');
-        await nightmare.goto(config.rb.coursesListLink).wait(4000);
+        await nightmare.goto(config.rb.coursesListLink);
         let siteData = await nightmare.evaluate(function () {
             let mainTableStat = document.querySelector('table.table');
             let arrObjects = [];

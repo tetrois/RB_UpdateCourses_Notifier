@@ -10,7 +10,7 @@
       "oldData": "./updates_data/DataCourses.json"
     },
     "rb": {
-        "mainLoginLink": "https://rb.sberbank-school.ru/auth/login",
+        "mainLoginLink": "https://auth.sberbank-school.ru/login",
         "coursesListLink": "https://rb.sberbank-school.ru/admin/courses?grid-1%5Bsort%5D%5Bname%5D=asc&grid-1%5Bper-page%5D=100",
         "login": "rb-support",
         "password": "GhbdtnKjifhbrb123",
