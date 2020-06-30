@@ -22,7 +22,7 @@ async function runParse() {
         let allTodayUpdates = [];
 
 
-        let nightmare = Nightmare({ show: true }); //openDevTools: { mode: 'detach' }
+        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
         nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
 
         await login(nightmare);
