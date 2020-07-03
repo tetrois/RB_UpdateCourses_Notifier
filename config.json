@@ -15,7 +15,7 @@
         "login": "rb-support",
         "password": "GhbdtnKjifhbrb123",
         "jsapiListCourses": "https://rb.sberbank-school.ru/jsapi/backend/courses/",
-        "listReleaseLink": "https://rb.sberbank-school.ru/jsapi/backend/videorelease?page=1",
+        "listReleaseLink": "https://rb.sberbank-school.ru/jsapi/backend/videorelease/list?page=1",
         "listExpress": "https://rb.sberbank-school.ru/admin/js-api/express-education/list",
         "idRelease": "https://rb.sberbank-school.ru/jsapi/backend/courses/390/migrations",
         "idExpress": "https://rb.sberbank-school.ru/jsapi/backend/courses/988/migrations"
