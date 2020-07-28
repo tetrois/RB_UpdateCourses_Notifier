@@ -346,7 +346,7 @@ function createMessageCourses(newSiteData, send) {
         let msg = [];
         if (send){
             for (let h = 0; h < newSiteData.length; h++) {
-                msg[h] = "%23"+ encodeURI(`update\nid: ${newSiteData[h].id}\nname: ${newSiteData[h].name}\nDate update: ${newSiteData[h].date_update}`);
+                msg[h] = "%23update " + `%23${newSiteData[h].id}` + encodeURI(`\nName: ${newSiteData[h].name}\nDate upd: ${newSiteData[h].date_update}`);
             }
             sendMessageTG(msg, config.telegram.chatSupport);
             sendMessageTG(msg, config.telegram.rbHelp);
@@ -368,7 +368,7 @@ function createMessageReleases(newReleases) {
         let msg = [];
         let i = 0;
         for (let key in newReleases) {
-            msg[i++] = "%23" + encodeURI(`update\nid: /rb_videorelease\nname: ${newReleases[key].name}\nDate update: ${newReleases[key].crated_at}`);
+            msg[i++] = "%23update " + "%23rb_videorelease" + encodeURI(`\nName: ${newReleases[key].name}\nDate upd: ${newReleases[key].crated_at}`);
         }
         sendMessageTG(msg, config.telegram.chatSupport);
         sendMessageTG(msg, config.telegram.rbHelp);
@@ -398,7 +398,7 @@ function sendMessageTG(message, chat) {
 }
 
 function msgError(e, f) {
-    let msg = ["%23" + encodeURI(`error\nfunc: ${f}\nError text: ${e}`)];
+    let msg = ["%23error" + encodeURI(`\nfunc: ${f}\nError text: ${e}`)];
     console.log(msg);
     return msg;
 }
