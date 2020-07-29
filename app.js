@@ -346,7 +346,7 @@ function createMessageCourses(newSiteData, send) {
         let msg = [];
         if (send){
             for (let h = 0; h < newSiteData.length; h++) {
-                msg[h] = "%23update " + `%23${newSiteData[h].id}` + encodeURI(`\nName: ${newSiteData[h].name}\nDate upd: ${newSiteData[h].date_update}`);
+                msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}`);
             }
             sendMessageTG(msg, config.telegram.chatSupport);
             sendMessageTG(msg, config.telegram.rbHelp);
@@ -368,7 +368,7 @@ function createMessageReleases(newReleases) {
         let msg = [];
         let i = 0;
         for (let key in newReleases) {
-            msg[i++] = "%23update " + "%23rb_videorelease" + encodeURI(`\nName: ${newReleases[key].name}\nDate upd: ${newReleases[key].crated_at}`);
+            msg[i++] = "%23rb_videorelease" + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
         }
         sendMessageTG(msg, config.telegram.chatSupport);
         sendMessageTG(msg, config.telegram.rbHelp);
