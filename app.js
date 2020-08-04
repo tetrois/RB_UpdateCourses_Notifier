@@ -27,32 +27,32 @@ async function runParse() {
         console.log(messageSend);
         makeUpdateFolder();
 
-        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
+        let nightmare = Nightmare({ show: true, openDevTools: { mode: 'detach' } }); //openDevTools: { mode: 'detach' }
         nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
 
         await login(nightmare);
 
         //Механика курсов
         let siteData = await listCourses(nightmare);
-        siteData = await parseSiteData(siteData, nightmare);
-        let newListCourses = compareData(siteData, oldSiteData);
-        writeData(siteData);
-        createMessageCourses(newListCourses, messageSend);
+        // siteData = await parseSiteData(siteData, nightmare);
+        // let newListCourses = compareData(siteData, oldSiteData);
+        // writeData(siteData);
+        // createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
-        let todayMigrationsR = await parseDataRE(nightmare, config.rb.idRelease, nowDate);
-        let todayReleasesNames = await getNamesRE(nightmare, config.rb.listReleaseLink, nowDate);
+        let todayMigrationsR = await getDataRE(nightmare, config.rb.idRelease);
+        let todayReleasesNames = await getDataRE(nightmare, config.rb.listReleaseLink);
         let newReleases = getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
         createMessageRE(newReleases, 'R', messageSend);
 
         //Механика экспрессов
-        let todayMigrationsE = await parseDataRE(nightmare, config.rb.idExpress, nowDate);
-        let todayExpressNames = await getNamesRE(nightmare, config.rb.listExpress);
+        let todayMigrationsE = await getDataRE(nightmare, config.rb.idExpress);
+        let todayExpressNames = await getDataRE(nightmare, config.rb.listExpress);
         let newExpress = getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = true;
-        await nightmare.end();
+        //await nightmare.end();
 
 
     } catch (error) {
@@ -217,53 +217,54 @@ async function parseSiteData(siteData, nightmare) {
     }
 }
 
-async function parseDataRE(nightmare, linkRelease, nowDate) {
-    try {
-        console.log("[Parse Release] -> Start");
-        console.log(`[Parse Release] -> URL: ${linkRelease}`);
-        await nightmare.goto(linkRelease);
-        let todayMigrations = {};
-        todayMigrations = await nightmare.evaluate(function (nowDate) {
-            try {
-                let allUpdates = JSON.parse(document.querySelector('pre').innerText);
-                let todayUpdates = [];
-                for (let i = 0; i < allUpdates.data.length; i++) {
-                    if (allUpdates.data[i].attributes.crated_at.indexOf(nowDate) === 0) {
-                        todayUpdates.push(allUpdates.data[i]);
-                    } else {
-                        break;
-                    }
-                };
-                return todayUpdates;
-            } catch (error) {
-                console.log("Bad Link =(");
-                console.error(error);
-            }
-        }, nowDate);
-        console.log(`[Parse Release] -> Count releases: ${todayMigrations.length}`);
-        console.log("[Parse Release] -> Done");
-        return todayMigrations;
-    } catch (error) {
-        console.log("[Parse Release] -> Error");
-        console.error(error);
-        sendMessageTG(msgError(error, "parseReleaseData"), config.telegram.debugChat);
-    }
-}
+// async function parseDataRE(nightmare, linkRelease, nowDate) {
+// try {
+//         console.log("[Parse Release] -> Start");
+//         console.log(`[Parse Release] -> URL: ${linkRelease}`);
+//         await nightmare.goto(linkRelease);
+//         let todayMigrations = {};
+//         todayMigrations = await nightmare.evaluate(function (nowDate) {
+//             try {
+//                 let allUpdates = JSON.parse(document.querySelector('pre').innerText);
+//                 let todayUpdates = [];
+//                 for (let i = 0; i < allUpdates.data.length; i++) {
+//                     if (allUpdates.data[i].attributes.crated_at.indexOf(nowDate) === 0) {
+//                         todayUpdates.push(allUpdates.data[i]);
+//                     } else {
+//                         break;
+//                     }
+//                 };
+//                 return todayUpdates;
+//             } catch (error) {
+//                 console.log("Bad Link =(");
+//                 console.error(error);
+//             }
+//         }, nowDate);
+//         writeDataRE(todayMigrations, nowDate, 'TEST')
+//         console.log(`[Parse Release] -> Count releases: ${todayMigrations.length}`);
+//         console.log("[Parse Release] -> Done");
+//         return todayMigrations;
+//     } catch (error) {
+//         console.log("[Parse Release] -> Error");
+//         console.error(error);
+//         sendMessageTG(msgError(error, "parseReleaseData"), config.telegram.debugChat);
+//     }
+// }
 
-async function getNamesRE(nightmare, listReleases) {
+async function getDataRE(nightmare, linkNames) {
     try {
         console.log("[Parse RE name] -> Start");
-        console.log(`[Parse RE name] -> URL: ${listReleases}`);
-        let todayReleasesNames = [];
-        todayReleasesNames = await nightmare.evaluate(function (listReleases) {
-            let listReleasesName = fetch(listReleases, { credentials: "same-origin" })
+        console.log(`[Parse RE name] -> URL: ${linkNames}`);
+        let listNames = [];
+        listNames = await nightmare.evaluate(function (linkNames) {
+            let dataRE = fetch(linkNames, { credentials: "same-origin" })
             .then(response => response.json())
-            .then(data => listReleasesName = data);
-            return listReleasesName;
-        }, listReleases);
-        console.log(`[Parse RE name] -> Count Release: ${todayReleasesNames.data.length}`);
+            .then(data => dataRE = data);
+            return dataRE;
+        }, linkNames);
+        console.log(`[Parse RE name] -> Count Release: ${listNames.data.length}`);
         console.log("[Parse RE name] -> Done");
-        return todayReleasesNames;
+        return listNames;
     } catch (error) {
         console.log("[Parse RE name] -> Error");
         console.error(error);
@@ -275,22 +276,22 @@ function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate
     try {
         let typeCourse = (type === 'R') ? 'Обновлена траектория Видеорелизов' : 'Обновлена траектория Экспресс обучения';
         let newReleases = {};
-        for (let i = 0; i < allTodayUpdates.length; i++) {
-            if (allTodayUpdates[i].attributes.crated_at.indexOf(nowDate) === -1) { continue };
-            if (usedReleases.updates.hasOwnProperty(allTodayUpdates[i].id)) {
+        for (let i = 0; i < allTodayUpdates.data.length; i++) {
+            if (allTodayUpdates.data[i].attributes.crated_at.indexOf(nowDate) === -1) { continue };
+            if (usedReleases.updates.hasOwnProperty(allTodayUpdates.data[i].id)) {
                 continue;
             } else {
-                usedReleases.updates[allTodayUpdates[i].id] = {
+                usedReleases.updates[allTodayUpdates.data[i].id] = {
                     videorelease_id: null,
-                    id_update: allTodayUpdates[i].id,
+                    id_update: allTodayUpdates.data[i].id,
                     name: typeCourse,
-                    crated_at: allTodayUpdates[i].attributes.crated_at
+                    crated_at: allTodayUpdates.data[i].attributes.crated_at
                 };
-                newReleases[allTodayUpdates[i].id] = {
+                newReleases[allTodayUpdates.data[i].id] = {
                     videorelease_id: null,
-                    id_update: allTodayUpdates[i].id,
+                    id_update: allTodayUpdates.data[i].id,
                     name: typeCourse,
-                    crated_at: allTodayUpdates[i].attributes.crated_at
+                    crated_at: allTodayUpdates.data[i].attributes.crated_at
                 };
 
                 for (let j = 0; j < listAllNames.data.length; j++) {
@@ -298,17 +299,17 @@ function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate
                     if (usedReleases.videorelease_id.hasOwnProperty(listAllNames.data[j].id)) {
                         continue;
                     } else {
-                        usedReleases.updates[allTodayUpdates[i].id] = {
+                        usedReleases.updates[allTodayUpdates.data[i].id] = {
                             videorelease_id: listAllNames.data[j].id,
                             name: listAllNames.data[j].name,
-                            crated_at: allTodayUpdates[i].attributes.crated_at
+                            crated_at: allTodayUpdates.data[i].attributes.crated_at
                         };
-                        newReleases[allTodayUpdates[i].id] = {
+                        newReleases[allTodayUpdates.data[i].id] = {
                             videorelease_id: listAllNames.data[j].id,
                             name: listAllNames.data[j].name,
-                            crated_at: allTodayUpdates[i].attributes.crated_at
+                            crated_at: allTodayUpdates.data[i].attributes.crated_at
                         };
-                        usedReleases.videorelease_id[listAllNames.data[j].id] = { id_update: allTodayUpdates[i].id };
+                        usedReleases.videorelease_id[listAllNames.data[j].id] = { id_update: allTodayUpdates.data[i].id };
                         break;
                     }
                 }
