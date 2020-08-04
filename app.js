@@ -27,17 +27,17 @@ async function runParse() {
         console.log(messageSend);
         makeUpdateFolder();
 
-        let nightmare = Nightmare({ show: true, openDevTools: { mode: 'detach' } }); //openDevTools: { mode: 'detach' }
+        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
         nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
 
         await login(nightmare);
 
         //Механика курсов
         let siteData = await listCourses(nightmare);
-        // siteData = await parseSiteData(siteData, nightmare);
-        // let newListCourses = compareData(siteData, oldSiteData);
-        // writeData(siteData);
-        // createMessageCourses(newListCourses, messageSend);
+        siteData = await parseSiteData(siteData, nightmare);
+        let newListCourses = compareData(siteData, oldSiteData);
+        writeData(siteData);
+        createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
         let todayMigrationsR = await getDataRE(nightmare, config.rb.idRelease);
@@ -52,7 +52,7 @@ async function runParse() {
         createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = true;
-        //await nightmare.end();
+        await nightmare.end();
 
 
     } catch (error) {
@@ -272,16 +272,16 @@ async function getDataRE(nightmare, linkNames) {
     }
 }
 
-function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate) {
+function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate) {
     try {
         let typeCourse = (type === 'R') ? 'Обновлена траектория Видеорелизов' : 'Обновлена траектория Экспресс обучения';
         let newReleases = {};
         for (let i = 0; i < allTodayUpdates.data.length; i++) {
             if (allTodayUpdates.data[i].attributes.crated_at.indexOf(nowDate) === -1) { continue };
-            if (usedReleases.updates.hasOwnProperty(allTodayUpdates.data[i].id)) {
+            if (usedRE.updates.hasOwnProperty(allTodayUpdates.data[i].id)) {
                 continue;
             } else {
-                usedReleases.updates[allTodayUpdates.data[i].id] = {
+                usedRE.updates[allTodayUpdates.data[i].id] = {
                     videorelease_id: null,
                     id_update: allTodayUpdates.data[i].id,
                     name: typeCourse,
@@ -296,10 +296,10 @@ function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate
 
                 for (let j = 0; j < listAllNames.data.length; j++) {
                     if (listAllNames.data[j].created_at.indexOf(nowDate)  === -1) { continue };
-                    if (usedReleases.videorelease_id.hasOwnProperty(listAllNames.data[j].id)) {
+                    if (usedRE.videorelease_id.hasOwnProperty(listAllNames.data[j].id)) {
                         continue;
                     } else {
-                        usedReleases.updates[allTodayUpdates.data[i].id] = {
+                        usedRE.updates[allTodayUpdates.data[i].id] = {
                             videorelease_id: listAllNames.data[j].id,
                             name: listAllNames.data[j].name,
                             crated_at: allTodayUpdates.data[i].attributes.crated_at
@@ -309,13 +309,13 @@ function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate
                             name: listAllNames.data[j].name,
                             crated_at: allTodayUpdates.data[i].attributes.crated_at
                         };
-                        usedReleases.videorelease_id[listAllNames.data[j].id] = { id_update: allTodayUpdates.data[i].id };
+                        usedRE.videorelease_id[listAllNames.data[j].id] = { id_update: allTodayUpdates.data[i].id };
                         break;
                     }
                 }
             }
         }
-        writeDataRE(usedReleases, nowDate, type);
+        writeDataRE(usedRE, nowDate, type);
         console.log(`[Get Upd ${type}] -> Done`);
         return newReleases;
     } catch (error) {
