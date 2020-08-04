@@ -1,5 +1,7 @@
 //R - Релизы
 //E - Экспресс курсы
+//RE - функционал относящийся и к релизам и к экспрессам
+//TG - Telegram
 
 const Nightmare = require('nightmare');
 const fs = require('fs').promises;
@@ -15,15 +17,15 @@ async function runParse() {
         
         let nowDate = getDate();//getDate();
 
-        // let listReleasesName = await getFileData(config.debug.listReleasesName);
-        // let migrationsData390 = await getFileData(config.debug.migrations);
+        //For Testing
+        //let todayMigrationsE = await getFileData(config.debug.todayMigration);
+        //let todayExpressNames = await getFileData(config.debug.todayEname);
+
         let oldSiteData = await getFileData(config.file.oldData);
         let usedReleases = await getUpdateData(nowDate, "R");
         let usedExpress = await getUpdateData(nowDate, "E");
         console.log(messageSend);
         makeUpdateFolder();
-        let allTodayUpdates = [];
-
 
         let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
         nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
@@ -38,19 +40,17 @@ async function runParse() {
         createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
-        let todayMigrationsR = await parseReleaseData(nightmare, config.rb.idRelease, nowDate);
-        let todayReleasesNames = await getReleasesNames(nightmare, config.rb.listReleaseLink, nowDate);
-        let newReleases = getUpdatedRelease(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
+        let todayMigrationsR = await parseDataRE(nightmare, config.rb.idRelease, nowDate);
+        let todayReleasesNames = await getNamesRE(nightmare, config.rb.listReleaseLink, nowDate);
+        let newReleases = getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
         createMessageRE(newReleases, 'R', messageSend);
 
         //Механика экспрессов
-        let todayMigrationsE = await parseReleaseData(nightmare, config.rb.idExpress, nowDate);
-        let todayExpressNames = await getReleasesNames(nightmare, config.rb.listExpress, nowDate);
-        let newExpress = getUpdatedRelease(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
+        let todayMigrationsE = await parseDataRE(nightmare, config.rb.idExpress, nowDate);
+        let todayExpressNames = await getNamesRE(nightmare, config.rb.listExpress);
+        let newExpress = getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
-        // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
-        // sendMessageTG(message, config.telegram.token, config.telegram.debugChat);
-
+        
         messageSend = true;
         await nightmare.end();
 
@@ -102,14 +102,14 @@ async function getFileData(fileName) {
     }
 };
 
-async function writeReleasesData(text, nowDate, type) {
+async function writeDataRE(text, nowDate, type) {
     try {
         await fs.writeFile(`./updates_data/${type}${nowDate}.json`, JSON.stringify(text));
         console.log('[Save Data] -> Done');
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
-        sendMessageTG(msgError(error, "writeReleasesData"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "writeDataRE"), config.telegram.debugChat);
     }
 }
 
@@ -185,6 +185,7 @@ async function listCourses(nightmare) {
     }
 }
 
+//Надо придумать замену через fetch
 async function parseSiteData(siteData, nightmare) {
     try {
         console.log("[Parse] -> Start");
@@ -216,7 +217,7 @@ async function parseSiteData(siteData, nightmare) {
     }
 }
 
-async function parseReleaseData(nightmare, linkRelease, nowDate) {
+async function parseDataRE(nightmare, linkRelease, nowDate) {
     try {
         console.log("[Parse Release] -> Start");
         console.log(`[Parse Release] -> URL: ${linkRelease}`);
@@ -249,10 +250,10 @@ async function parseReleaseData(nightmare, linkRelease, nowDate) {
     }
 }
 
-async function getReleasesNames(nightmare, listReleases) {
+async function getNamesRE(nightmare, listReleases) {
     try {
-        console.log("[Parse Releases name] -> Start");
-        console.log(`[Parse Releases name] -> URL: ${listReleases}`);
+        console.log("[Parse RE name] -> Start");
+        console.log(`[Parse RE name] -> URL: ${listReleases}`);
         let todayReleasesNames = [];
         todayReleasesNames = await nightmare.evaluate(function (listReleases) {
             let listReleasesName = fetch(listReleases, { credentials: "same-origin" })
@@ -260,25 +261,25 @@ async function getReleasesNames(nightmare, listReleases) {
             .then(data => listReleasesName = data);
             return listReleasesName;
         }, listReleases);
-        console.log(`[Parse Releases name] -> Count Release: ${todayReleasesNames.data.length}`);
-        console.log("[Parse Releases name] -> Done");
+        console.log(`[Parse RE name] -> Count Release: ${todayReleasesNames.data.length}`);
+        console.log("[Parse RE name] -> Done");
         return todayReleasesNames;
     } catch (error) {
-        console.log("[Parse Releases name] -> Error");
+        console.log("[Parse RE name] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "getReleasesNames"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "getNamesRE"), config.telegram.debugChat);
     }
 }
 
-function getUpdatedRelease(usedReleases, allTodayUpdates, listAllNames, type, nowDate) {
+function getUpdatedRE(usedReleases, allTodayUpdates, listAllNames, type, nowDate) {
     try {
         let typeCourse = (type === 'R') ? 'Обновлена траектория Видеорелизов' : 'Обновлена траектория Экспресс обучения';
         let newReleases = {};
         for (let i = 0; i < allTodayUpdates.length; i++) {
+            if (allTodayUpdates[i].attributes.crated_at.indexOf(nowDate) === -1) { continue };
             if (usedReleases.updates.hasOwnProperty(allTodayUpdates[i].id)) {
                 continue;
             } else {
-
                 usedReleases.updates[allTodayUpdates[i].id] = {
                     videorelease_id: null,
                     id_update: allTodayUpdates[i].id,
@@ -293,6 +294,7 @@ function getUpdatedRelease(usedReleases, allTodayUpdates, listAllNames, type, no
                 };
 
                 for (let j = 0; j < listAllNames.data.length; j++) {
+                    if (listAllNames.data[j].created_at.indexOf(nowDate)  === -1) { continue };
                     if (usedReleases.videorelease_id.hasOwnProperty(listAllNames.data[j].id)) {
                         continue;
                     } else {
@@ -312,11 +314,11 @@ function getUpdatedRelease(usedReleases, allTodayUpdates, listAllNames, type, no
                 }
             }
         }
-        writeReleasesData(usedReleases, nowDate, type);
-        console.log("[Get Upd Releases] -> Done");
+        writeDataRE(usedReleases, nowDate, type);
+        console.log(`[Get Upd ${type}] -> Done`);
         return newReleases;
     } catch (error) {
-        console.log("[Get Upd Releases] -> Error");
+        console.log(`[Get Upd ${type}] -> Error`);
         console.error(error);
         sendMessageTG(msgError(error, "getUpdatedRelease"), config.telegram.debugChat);
     }
@@ -392,6 +394,7 @@ function createMessageRE(newReleases, type, send) {
             for (let key in newReleases) {
                 msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
             }
+//TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
             sendMessageTG(msg, config.telegram.chatSupport);
             sendMessageTG(msg, config.telegram.rbHelp);
             sendMessageTG([`New%20${type}%20 ${msg.length}`], config.telegram.debugChat);
