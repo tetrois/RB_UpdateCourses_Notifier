@@ -27,9 +27,12 @@ async function runParse() {
         console.log(messageSend);
         makeUpdateFolder();
 
-        let nightmare = Nightmare({ show: false }); //openDevTools: { mode: 'detach' }
-        nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
-
+        let nightmare = Nightmare({ 
+            show: false,
+            //openDevTools: { mode: 'detach' }
+        });
+        //nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
+        
         await login(nightmare);
 
         //Механика курсов
@@ -58,6 +61,7 @@ async function runParse() {
     } catch (error) {
         console.log("[Main] -> Error");
         console.error(error);
+        await nightmare.end();
         sendMessageTG(msgError(error, `runParse`), config.telegram.debugChat);
     } finally {
         console.log('All Complete');
@@ -141,11 +145,15 @@ async function login(nightmare) {
     //try {
         console.log('[Login] -> Start');
         await nightmare
-            .goto(config.rb.mainLoginLink)
-            .insert('[name=login]', config.rb.login)
+            .goto('https://rb.sberbank-school.ru/auth/login') //config.rb.mainLoginLink
+            .insert('[name=user_login]', config.rb.login) //login
             .insert('[name=password]', config.rb.password)
             .click('button.button')
             .wait(2000)
+            // .wait( ()=> {
+            //     return window.location.href === 'https://rb.sberbank-school.ru/'
+            // } )
+            .goto('https://rb.sberbank-school.ru/')
             
         //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
