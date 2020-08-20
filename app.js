@@ -7,6 +7,7 @@ const Nightmare = require('nightmare');
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
+const fetch = require('node-fetch');
 
 let messageSend = true;
 
@@ -28,34 +29,34 @@ async function runParse() {
         makeUpdateFolder();
 
         let nightmare = Nightmare({ 
-            show: false,
-            //openDevTools: { mode: 'detach' }
+            show: true,
+            openDevTools: { mode: 'detach' }
         });
         //nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
         
         await login(nightmare);
 
         //Механика курсов
-        let siteData = await listCourses(nightmare);
-        siteData = await parseSiteData(siteData, nightmare);
-        let newListCourses = compareData(siteData, oldSiteData);
-        writeData(siteData);
-        createMessageCourses(newListCourses, messageSend);
+        // let siteData = await listCourses(nightmare);
+        // siteData = await parseSiteData(siteData, nightmare);
+        // let newListCourses = compareData(siteData, oldSiteData);
+        // writeData(siteData);
+        // createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
-        let todayMigrationsR = await getDataRE(nightmare, config.rb.idRelease);
-        let todayReleasesNames = await getDataRE(nightmare, config.rb.listReleaseLink);
-        let newReleases = getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
-        createMessageRE(newReleases, 'R', messageSend);
+        // let todayMigrationsR = await getDataRE(nightmare, config.rb.idRelease);
+        // let todayReleasesNames = await getDataRE(nightmare, config.rb.listReleaseLink);
+        // let newReleases = getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
+        // createMessageRE(newReleases, 'R', messageSend);
 
         //Механика экспрессов
-        let todayMigrationsE = await getDataRE(nightmare, config.rb.idExpress);
-        let todayExpressNames = await getDataRE(nightmare, config.rb.listExpress);
-        let newExpress = getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
-        createMessageRE(newExpress, 'E', messageSend);
+        // let todayMigrationsE = await getDataRE(nightmare, config.rb.idExpress);
+        // let todayExpressNames = await getDataRE(nightmare, config.rb.listExpress);
+        // let newExpress = getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
+        // createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = true;
-        await nightmare.end();
+        //await nightmare.end();
 
 
     } catch (error) {
@@ -150,10 +151,18 @@ async function login(nightmare) {
             .insert('[name=password]', config.rb.password)
             .click('button.button')
             .wait(2000)
+            let cookie1 = await nightmare.cookies.get('sbs_session');
+            let cookie2 = await nightmare.cookies.get('XSRF-TOKEN');
+            nightmare.end();
+            nightmare.halt();
+            console.log(cookie1);
+            console.log(cookie2);
+            let s2 = await test(cookie1, cookie2);
+            console.log(s2)
             // .wait( ()=> {
             //     return window.location.href === 'https://rb.sberbank-school.ru/'
             // } )
-            .goto('https://rb.sberbank-school.ru/')
+            //.goto('https://rb.sberbank-school.ru/')
             
         //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
@@ -162,6 +171,18 @@ async function login(nightmare) {
     //     console.error(error);
     //     sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
     // }
+}
+
+async function test(c1, c2) {
+    let dataRE = await fetch('https://rb.sberbank-school.ru/jsapi/backend/courses/732/migrations', { 
+            credentials: "same-origin",
+            headers: {
+                cookie: `${c1.name}=${c1.value}; ${c2.name}=${c2.value};`
+            }
+        })
+        .then(response => response.text())
+        //.then(data => dataRE = data);
+    return dataRE;
 }
 
 //List courses
@@ -196,26 +217,23 @@ async function listCourses(nightmare) {
 //Надо придумать замену через fetch
 async function parseSiteData(siteData, nightmare) {
     try {
-        console.log("[Parse] -> Start");
-        for (let i = 0; i < siteData.length; i++) { //siteData.length
-            console.log(`[Parse] -> URL: ${siteData[i].idLink}`);
-            await nightmare.goto(siteData[i].idLink).wait(1000);
-            let dateUpdate2 = {};
-            dateUpdate2 = await nightmare.evaluate(function () {
-                try {
-                    let q1 = {};
-                    let q2 = JSON.parse(document.querySelector('pre').innerText);
-                    q1.id_update = q2.data[0].id;
-                    q1.date_update = q2.data[0].attributes.updated_at;
-                    console.log(q1);
-                    return q1;
-                } catch (error) {
-                    console.error(error);
-                    console.log("Bad Link =(");
-                }
-            });
-            Object.assign(siteData[i], dateUpdate2);
-        }
+        console.log("[Parse] -> Start"); 
+        parseData = await nightmare.evaluate(async function (siteData) {
+            
+           var fn = async function delay(elem) {
+               const response = await fetch(elem.idLink, { credentials: "same-origin" });
+               const data = await response.json();
+               if (data.data.length !== 0) {
+                   elem.id_update = data.data[0].id;
+                   elem.date_update = data.data[0].attributes.updated_at;
+               }
+           }
+            
+            var actions = siteData.map(fn);
+            var result = await Promise.all(actions);
+            return result;
+            
+        }, siteData);
         console.log("[Parse] -> Done");
         return siteData;
     } catch (error) {
@@ -224,6 +242,37 @@ async function parseSiteData(siteData, nightmare) {
         sendMessageTG(msgError(error, "parseSiteData"), config.telegram.debugChat);
     }
 }
+
+// async function parseSiteData(siteData, nightmare) {
+//     try {
+//         console.log("[Parse] -> Start");
+//         for (let i = 0; i < siteData.length; i++) { //siteData.length
+//             console.log(`[Parse] -> URL: ${siteData[i].idLink}`);
+//             await nightmare.goto(siteData[i].idLink).wait(1000);
+//             let dateUpdate2 = {};
+//             dateUpdate2 = await nightmare.evaluate(function () {
+//                 try {
+//                     let q1 = {};
+//                     let q2 = JSON.parse(document.querySelector('pre').innerText);
+//                     q1.id_update = q2.data[0].id;
+//                     q1.date_update = q2.data[0].attributes.updated_at;
+//                     console.log(q1);
+//                     return q1;
+//                 } catch (error) {
+//                     console.error(error);
+//                     console.log("Bad Link =(");
+//                 }
+//             });
+//             Object.assign(siteData[i], dateUpdate2);
+//         }
+//         console.log("[Parse] -> Done");
+//         return siteData;
+//     } catch (error) {
+//         console.log("[Parse] -> Error");
+//         console.error(error);
+//         sendMessageTG(msgError(error, "parseSiteData"), config.telegram.debugChat);
+//     }
+// }
 
 // async function parseDataRE(nightmare, linkRelease, nowDate) {
 // try {
