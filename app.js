@@ -4,7 +4,6 @@
 //TG - Telegram
 
 var Horseman = require('node-horseman');
-var horseman = new Horseman({ timeout: 10000 });
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
@@ -154,6 +153,8 @@ async function getUpdateData(nowDate, type) {
 async function login() {
     try {
         console.log('[Login] -> Start');
+
+        let horseman = new Horseman({ timeout: 10000 });
 
         await horseman
         .userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36')
