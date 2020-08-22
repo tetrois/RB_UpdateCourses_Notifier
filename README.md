@@ -2,7 +2,7 @@
 
 Парсер данных с сайта и отправка их в телеграм через бота.
 
-Запускать в фоне пока так: nohup node app.js> output.log &
+Запускать в фоне пока так: npm start или nohup node app.js> output.log &
 
 npm i phantomjs-prebuilt
 npm i node-horseman

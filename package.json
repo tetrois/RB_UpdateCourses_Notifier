@@ -2,7 +2,7 @@
   "name": "rb_updatecourses_notifier",
   "version": "1.0.0",
   "description": "Парсер данных с сайта и отправка их в телеграм через бота.",
-  "main": "app.js",
+  "main": "nohup node app.js> output.log &",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
