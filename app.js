@@ -4,11 +4,7 @@
 //TG - Telegram
 
 var Horseman = require('node-horseman');
-var horseman = new Horseman(
-    {
-        timeout: 10000
-    }
-);
+var horseman = new Horseman({ timeout: 10000 });
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
@@ -24,11 +20,7 @@ async function runParse() {
     try {
         console.log('Running...');
         
-        let nowDate = getDate();//getDate();
-
-        //For Testing
-        //let todayMigrationsE = await getFileData(config.debug.todayMigration);
-        //let todayExpressNames = await getFileData(config.debug.todayEname);
+        let nowDate = getDate();
 
         let oldSiteData = await getFileData(config.file.oldData);
         let usedReleases = await getUpdateData(nowDate, "R");
@@ -36,8 +28,6 @@ async function runParse() {
         makeUpdateFolder();
 
         await checkCookie();
-
-
 
         //Механика курсов
         let siteData = await listCourses();
@@ -115,7 +105,7 @@ async function getFileData(fileName) {
         if (fileData === undefined) {
             messageSend = false;
             sendMessageTG("sendMessageOff", config.telegram.debugChat);
-        };//ПРОВЕРКУ НА КРИВОЙ ФАЙЛ
+        };
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
@@ -226,7 +216,7 @@ async function listCourses() {
         const document  = (new JSDOM(siteData)).window.document;
         let mainTableStat = document.querySelector('table.table');
         let arrObjects = [];
-        for (let i = 1; i < mainTableStat.rows.length; i++) { //mainTableStat.rows.length
+        for (let i = 1; i < mainTableStat.rows.length; i++) {
             if ((mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && (mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
                 let cells_0 =  mainTableStat.rows[i].cells[0].children[0];
                 let cells_1 =  mainTableStat.rows[i].cells[1].textContent;
@@ -356,8 +346,6 @@ function compareData(siteData, oldSiteData) {
                         if (oldSiteData[a].id_update !== siteData[a].id_update) {
                             newSiteData.push(siteData[a]);
                         }
-                    } else {
-
                     }
                 } catch (error) {
                     console.log('[Compare] -> Name Not Found');
