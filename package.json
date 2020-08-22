@@ -1,23 +1,27 @@
 {
-  "name": "rb_course_update_notifier",
-  "version": "1.0.1",
-  "description": "",
+  "name": "rb_updatecourses_notifier",
+  "version": "1.0.0",
+  "description": "Парсер данных с сайта и отправка их в телеграм через бота.",
   "main": "app.js",
-  "dependencies": {
-    "cheerio": "^1.0.0-rc.3",
-    "fs": "0.0.1-security",
-    "nightmare": "^3.0.2",
-    "request": "^2.88.2",
-    "xmlhttprequest": "^1.8.0"
-  },
-  "devDependencies": {
-    "electron": "^9.0.5"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "xvfb-run node --harmony app.js & disown %1"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tetrois/RB_UpdateCourses_Notifier.git"
+  },
   "author": "@tetrois",
-  "license": "ISC"
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tetrois/RB_UpdateCourses_Notifier/issues"
+  },
+  "homepage": "https://github.com/tetrois/RB_UpdateCourses_Notifier#readme",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "jsdom": "^16.4.0",
+    "node-fetch": "^2.6.0",
+    "node-horseman": "^3.3.0",
+    "phantomjs-prebuilt": "^2.1.16",
+    "request": "^2.88.2"
+  }
 }

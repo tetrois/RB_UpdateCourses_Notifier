@@ -3,12 +3,21 @@
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
 
-const Nightmare = require('nightmare');
+var Horseman = require('node-horseman');
+var horseman = new Horseman(
+    {
+        timeout: 10000
+    }
+);
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
+const fetch = require('node-fetch');
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
 let messageSend = true;
+let cookie = {};
 
 
 async function runParse() {
@@ -24,50 +33,62 @@ async function runParse() {
         let oldSiteData = await getFileData(config.file.oldData);
         let usedReleases = await getUpdateData(nowDate, "R");
         let usedExpress = await getUpdateData(nowDate, "E");
-        console.log(messageSend);
         makeUpdateFolder();
 
-        let nightmare = Nightmare({ 
-            show: false,
-            //openDevTools: { mode: 'detach' }
-        });
-        //nightmare.useragent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36');
-        
-        await login(nightmare);
+        await checkCookie();
+
+
 
         //Механика курсов
-        let siteData = await listCourses(nightmare);
-        siteData = await parseSiteData(siteData, nightmare);
+        let siteData = await listCourses();
+        siteData = await parseSiteData(siteData);
         let newListCourses = compareData(siteData, oldSiteData);
         writeData(siteData);
         createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
-        let todayMigrationsR = await getDataRE(nightmare, config.rb.idRelease);
-        let todayReleasesNames = await getDataRE(nightmare, config.rb.listReleaseLink);
-        let newReleases = getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
+        let todayMigrationsR = await getDataRE(config.rb.idRelease, 'R', 'updates');
+        let todayReleasesNames = await getDataRE(config.rb.listReleaseLink, 'R', 'names');
+        let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
         createMessageRE(newReleases, 'R', messageSend);
 
         //Механика экспрессов
-        let todayMigrationsE = await getDataRE(nightmare, config.rb.idExpress);
-        let todayExpressNames = await getDataRE(nightmare, config.rb.listExpress);
-        let newExpress = getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
+        let todayMigrationsE = await getDataRE(config.rb.idExpress, 'E', 'updates');
+        let todayExpressNames = await getDataRE(config.rb.listExpress, 'E', 'names');
+        let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = true;
-        await nightmare.end();
 
 
     } catch (error) {
         console.log("[Main] -> Error");
         console.error(error);
-        await nightmare.end();
         sendMessageTG(msgError(error, `runParse`), config.telegram.debugChat);
     } finally {
         console.log('All Complete');
         sendMessageTG(['All%20Complete'], config.telegram.debugChat);
     }
 };
+
+async function checkCookie() {
+    console.log('[Auth] Check has cookie: ', cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN'));
+    if(cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN')) {
+        let status = !((((cookie.sbs_session.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
+        console.log('[Auth] Check cookie expiration Date: ', status );
+        if ( status ){
+            console.log('[Auth] Get cookie process start');
+            await login();
+            console.log('[Auth] Done');
+        } else {
+            console.log('[Auth] Cookie Good');
+        }
+    } else { 
+        console.log('[Auth] Get cookie process start');
+        await login();
+        console.log('[Auth] Done');
+    }
+}
 
 //Получаем текущую дату и фоматируем ее в yyyy-mm-dd
 function getDate() {
@@ -98,10 +119,9 @@ async function getFileData(fileName) {
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
-        console.log(`[Read Old Save Data] -> Error Read File ${fileName}`);
+        console.log(`[Read Old Save Data] -> Error Read File ${fileName}. Using empty data.`);
         messageSend = false;
-        console.error(error);
-        sendMessageTG(msgError(error, `getFileData ${fileName}`), config.telegram.debugChat);
+        sendMessageTG(msgError(null, `Creating empty file ${fileName}`), config.telegram.debugChat);
         return fileData = {}
     }
 };
@@ -135,57 +155,93 @@ async function getUpdateData(nowDate, type) {
     } catch (error) {
         messageSend = false;
         console.log(`[Read ${type} Data] -> File used release not found. Will be using empty data.`);
-        sendMessageTG(msgError(error, "getUpdateData"), config.telegram.debugChat);
+        sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), config.telegram.debugChat);
         return data = { updates: {}, videorelease_id: {} };
     }
 }
 
 //Login
-async function login(nightmare) {
-    //try {
+async function login() {
+    try {
         console.log('[Login] -> Start');
-        await nightmare
-            .goto('https://rb.sberbank-school.ru/auth/login') //config.rb.mainLoginLink
-            .insert('[name=user_login]', config.rb.login) //login
-            .insert('[name=password]', config.rb.password)
-            .click('button.button')
-            .wait(2000)
-            // .wait( ()=> {
-            //     return window.location.href === 'https://rb.sberbank-school.ru/'
-            // } )
-            .goto('https://rb.sberbank-school.ru/')
+
+        await horseman
+        .userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36')
+        .open(config.rb.mainLoginLink)
+        .type('[name=user_login]', config.rb.login)
+        .type('[name=password]', config.rb.password)
+        .click('button.button')
+        .waitForNextPage()
+        .url().then((response)=>{
+            console.log('[Login] Auth URL: ', response);
+        })
+        .cookies().then((response)=>{
+            response.forEach((el)=>{
+                if (el.name === "sbs_session") { cookie.sbs_session = el };
+                if (el.name === "XSRF-TOKEN") { cookie.XSRF_TOKEN = el };
+            })
+            return horseman.close();
+        })
             
-        //.goto(config.rb.coursesListLink)
         console.log('[Login] -> Complete');
-    // } catch (error) {
-    //     console.log("[Login] -> Error");
-    //     console.error(error);
-    //     sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
-    // }
+    } catch (error) {
+        console.log("[Login] -> Error");
+        console.error(error);
+        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
+    }
+}
+
+function makeRequestHeader() {
+    return { 
+        credentials: "same-origin",
+        headers: {
+            cookie: `${cookie.sbs_session.name}=${cookie.sbs_session.value}; ${cookie.XSRF_TOKEN.name}=${cookie.XSRF_TOKEN.value};`
+        }
+    }
+}
+
+async function getApiData(link, typeReturn) {
+    try {
+        let response = await fetch(link, makeRequestHeader());
+        //console.log(`[Get Api Data] -> Requset to ${link} ${response.status}`)
+        if (response.ok) {
+            let data;
+            if (typeReturn === 'json') { data = await response.json() };
+            if (typeReturn === 'text') { data = await response.text() };
+            return data;
+        } else {
+            console.log(`[Get Api Data] -> Bad response from URL: ${link}  Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.log('Error get data ', error);
+        return error;
+    }
 }
 
 //List courses
-async function listCourses(nightmare) {
+async function listCourses() {
     try {
         console.log('[List Courses] -> Start');
-        await nightmare.goto(config.rb.coursesListLink);
-        let siteData = await nightmare.evaluate(function () {
-            let mainTableStat = document.querySelector('table.table');
-            let arrObjects = [];
-            for (let i = 1; i < mainTableStat.rows.length; i++) { //mainTableStat.rows.length
-                if ((mainTableStat.rows[i].innerText.indexOf("Основной курс для Видеорелизов") !== 0) && (mainTableStat.rows[i].innerText.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
-                    arrObjects[i] = {
-                        name: mainTableStat.rows[i].cells[0].innerText,
-                        id: mainTableStat.rows[i].cells[1].innerText.substring(mainTableStat.rows[i].cells[1].innerText.indexOf("/", 28)),
-                        idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "")}/migrations`,
-                        idCourse: mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "")
-                    }
+        let siteData = await getApiData(config.rb.coursesListLink, 'text');
+        const document  = (new JSDOM(siteData)).window.document;
+        let mainTableStat = document.querySelector('table.table');
+        let arrObjects = [];
+        for (let i = 1; i < mainTableStat.rows.length; i++) { //mainTableStat.rows.length
+            if ((mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && (mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
+                let cells_0 =  mainTableStat.rows[i].cells[0].children[0];
+                let cells_1 =  mainTableStat.rows[i].cells[1].textContent;
+                let course_id =  mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "");
+
+                arrObjects[i-1] = {
+                    name: cells_0.textContent,
+                    id:   cells_1.substring( cells_1.lastIndexOf("/"), cells_1.length-5 ),
+                    idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${course_id}/migrations`,
+                    idCourse: course_id
                 }
             }
-            return arrObjects;
-        });
-        console.log('[List Courses] -> Complete, Total: ' + siteData.length);
-        return siteData;
+        }        
+        console.log('[List Courses] -> Complete, Total: ' + arrObjects.length);
+        return arrObjects;
     } catch (error) {
         console.log("[List Courses] -> Error");
         console.error(error);
@@ -193,94 +249,49 @@ async function listCourses(nightmare) {
     }
 }
 
-//Надо придумать замену через fetch
-async function parseSiteData(siteData, nightmare) {
+
+async function parseSiteData(siteData) {
     try {
-        console.log("[Parse] -> Start");
-        for (let i = 0; i < siteData.length; i++) { //siteData.length
-            console.log(`[Parse] -> URL: ${siteData[i].idLink}`);
-            await nightmare.goto(siteData[i].idLink).wait(1000);
-            let dateUpdate2 = {};
-            dateUpdate2 = await nightmare.evaluate(function () {
-                try {
-                    let q1 = {};
-                    let q2 = JSON.parse(document.querySelector('pre').innerText);
-                    q1.id_update = q2.data[0].id;
-                    q1.date_update = q2.data[0].attributes.updated_at;
-                    console.log(q1);
-                    return q1;
-                } catch (error) {
-                    console.error(error);
-                    console.log("Bad Link =(");
-                }
-            });
-            Object.assign(siteData[i], dateUpdate2);
+        console.log("[Parse] -> Start"); 
+                 
+        var fn = async function delay(elem) {
+            let data = await getApiData(elem.idLink, 'json');
+            if (data.data.length !== 0) {
+                elem.id_update = data.data[0].id;
+                elem.date_update = data.data[0].attributes.updated_at;
+            }
         }
+        
+        let actions = siteData.map(fn);
+        await Promise.all(actions);
         console.log("[Parse] -> Done");
         return siteData;
     } catch (error) {
         console.log("[Parse] -> Error");
         console.error(error);
         sendMessageTG(msgError(error, "parseSiteData"), config.telegram.debugChat);
+        return error;
     }
 }
 
-// async function parseDataRE(nightmare, linkRelease, nowDate) {
-// try {
-//         console.log("[Parse Release] -> Start");
-//         console.log(`[Parse Release] -> URL: ${linkRelease}`);
-//         await nightmare.goto(linkRelease);
-//         let todayMigrations = {};
-//         todayMigrations = await nightmare.evaluate(function (nowDate) {
-//             try {
-//                 let allUpdates = JSON.parse(document.querySelector('pre').innerText);
-//                 let todayUpdates = [];
-//                 for (let i = 0; i < allUpdates.data.length; i++) {
-//                     if (allUpdates.data[i].attributes.crated_at.indexOf(nowDate) === 0) {
-//                         todayUpdates.push(allUpdates.data[i]);
-//                     } else {
-//                         break;
-//                     }
-//                 };
-//                 return todayUpdates;
-//             } catch (error) {
-//                 console.log("Bad Link =(");
-//                 console.error(error);
-//             }
-//         }, nowDate);
-//         writeDataRE(todayMigrations, nowDate, 'TEST')
-//         console.log(`[Parse Release] -> Count releases: ${todayMigrations.length}`);
-//         console.log("[Parse Release] -> Done");
-//         return todayMigrations;
-//     } catch (error) {
-//         console.log("[Parse Release] -> Error");
-//         console.error(error);
-//         sendMessageTG(msgError(error, "parseReleaseData"), config.telegram.debugChat);
-//     }
-// }
 
-async function getDataRE(nightmare, linkNames) {
+async function getDataRE(linkNames, type, what) {
     try {
-        console.log("[Parse RE name] -> Start");
-        console.log(`[Parse RE name] -> URL: ${linkNames}`);
+        //console.log(`[Parse ${type} ${what}] -> Start`);
+        console.log(`[Parse ${type} ${what}] -> URL: ${linkNames}`);
         let listNames = [];
-        listNames = await nightmare.evaluate(function (linkNames) {
-            let dataRE = fetch(linkNames, { credentials: "same-origin" })
-            .then(response => response.json())
-            .then(data => dataRE = data);
-            return dataRE;
-        }, linkNames);
-        console.log(`[Parse RE name] -> Count Release: ${listNames.data.length}`);
-        console.log("[Parse RE name] -> Done");
+        listNames = await getApiData(linkNames, 'json');
+        console.log(`[Parse ${type} ${what}] -> Count Release: ${listNames.data.length}`);
+        //console.log(`[Parse ${type} ${what}] -> Done`);
         return listNames;
     } catch (error) {
-        console.log("[Parse RE name] -> Error");
+        console.log(`[Parse ${type} ${what}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, "getNamesRE"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, `getNamesRE`), config.telegram.debugChat);
     }
 }
 
-function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate) {
+async function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate) {
     try {
         let typeCourse = (type === 'R') ? 'Обновлена траектория Видеорелизов' : 'Обновлена траектория Экспресс обучения';
         let newReleases = {};
@@ -323,7 +334,7 @@ function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate) {
                 }
             }
         }
-        writeDataRE(usedRE, nowDate, type);
+        await writeDataRE(usedRE, nowDate, type);
         console.log(`[Get Upd ${type}] -> Done`);
         return newReleases;
     } catch (error) {
@@ -341,8 +352,7 @@ function compareData(siteData, oldSiteData) {
             for (let a = 0; a < siteData.length; a++) {
                 try {
                     if (oldSiteData[a].id === siteData[a].id) {
-                        console.log(`[Compare] -> ${a}) 1: ${oldSiteData[a].name}  | Old version: ${oldSiteData[a].id_update}`);
-                        console.log(`[Compare] -> ${a}) 2: ${siteData[a].name}  | New version: ${siteData[a].id_update}`);
+                        console.log(`[Compare] -> ${a}) id: ${oldSiteData[a].idCourse}/${siteData[a].idCourse}  | Version: ${oldSiteData[a].id_update}/${siteData[a].id_update}`);
                         if (oldSiteData[a].id_update !== siteData[a].id_update) {
                             newSiteData.push(siteData[a]);
                         }
@@ -395,7 +405,7 @@ function createMessageRE(newReleases, type, send) {
 
         let typeCourse = (type === 'R') ? 'rb_videorelease' : 'rb_express_education';
 
-        console.log(`[Create Message ${type}] -> Start`);
+        //console.log(`[Create Message ${type}] -> Start`);
         let msg = [];
 
         if (send) {
@@ -419,13 +429,13 @@ function createMessageRE(newReleases, type, send) {
 }
 
 function sendMessageTG(message, chat) {
-    console.log("[Send Message] -> Start");
+    //console.log("[Send Message] -> Start");
     try {
         for (let i = 0; i < message.length; i++) {
            http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
         }
 
-        console.log("[Send Message] -> Done");
+        //console.log("[Send Message] -> Done");
     } catch (error) {
         console.log("[Send Message] -> Error");
         console.error(error);
@@ -435,7 +445,7 @@ function sendMessageTG(message, chat) {
 
 function msgError(e, f) {
     let msg = ["%23error" + encodeURI(`\nfunc: ${f}\nError text: ${e}`)];
-    console.log(msg);
+    //console.log(msg);
     return msg;
 }
 async function makeUpdateFolder() {
