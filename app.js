@@ -15,7 +15,7 @@ const { JSDOM } = jsdom;
 Browser.silent = true;
 const browser = new Browser({userAgent: 'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko', waitFor: 10000});
 
-let messageSend = true;
+let messageSend = false;
 let cookie = {};
 
 
@@ -67,7 +67,7 @@ async function runParse() {
 async function checkCookie() {
     console.log('[Auth] Check has cookie: ', cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN'));
     if(cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN')) {
-        let status = !((((cookie.sbs_session.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
+        let status = !((((cookie.sbs_session.expires * 1000) - (5 * 60)) - Date.now()) >= 0);
         console.log('[Auth] Check cookie expiration Date: ', status );
         if ( status ){
             console.log('[Auth] Get cookie process start');
@@ -157,48 +157,36 @@ async function getUpdateData(nowDate, type) {
 async function login() {
     try {
         console.log('[Login] -> Start');
-        console.log(1);
         await browser.visit(config.rb.mainLoginLink).then( (e) => {
-            console.log(2);
             if (e) return console.error(e);
         })
-            console.log(3);
         await browser.wait().then((window) => {
-            console.log(4);
             return browser.window.document.querySelector('button.button');
         })
-        console.log(5);
         await browser.fill('input[name=user_login]', config.rb.login)
-        console.log(6);
         await browser.fill('input[name=password]', config.rb.password)
-        console.log(7);
         try {
             await browser.pressButton('button.button')
-        } catch (error) {
-            
-        }
-        console.log(7.1);
+        } catch (error) { }
+
         await browser.wait().then( ()=> {
-            console.log(8);
             console.info("[Login] Auth URL: ", browser.window.location.href);
             if ("https://rb.sberbank-school.ru/" === browser.window.location.href){
+                console.log(browser.getCookie('sbs_session', true));
                 cookie.sbs_session = browser.getCookie('sbs_session', true);
                 cookie.XSRF_TOKEN  = browser.getCookie('XSRF-TOKEN', true);
-                delete browser.cookies;
+                //delete browser.cookies;
                 try {
-                    browser.tabs.closeAll();
+                    browser.window.close();
                 } catch (error) { }
             }
-            console.log(9);
         } )
-        console.log(10);      
-            
 
         console.log('[Login] -> Complete');
     } catch (error) {
         console.log("[Login] -> Error");
         console.error(error);
-        //sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
     }
 }
 
