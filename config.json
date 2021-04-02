@@ -1,5 +1,5 @@
 {
-    "interval": "900000",
+    "interval": "300000",
     "telegram": {
       "token": "893111665:AAH8ITkQgb36--trJYEdtua2J7cp6ncowI8",
       "chatSupport": "-1001460774047",
