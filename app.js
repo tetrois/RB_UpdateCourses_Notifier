@@ -3,13 +3,17 @@
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
 
-var Horseman = require('node-horseman');
+//var Horseman = require('node-horseman');
+const Browser = require('zombie');
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
 const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
+
+Browser.silent = true;
+const browser = new Browser({userAgent: 'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko', waitFor: 10000});
 
 let messageSend = true;
 let cookie = {};
@@ -18,7 +22,7 @@ let cookie = {};
 async function runParse() {
     try {
         console.log('Running...');
-        
+
         let nowDate = getDate();
 
         let oldSiteData = await getFileData(config.file.oldData);
@@ -153,36 +157,61 @@ async function getUpdateData(nowDate, type) {
 async function login() {
     try {
         console.log('[Login] -> Start');
-
-        let horseman = new Horseman({ timeout: 10000 });
-
-        await horseman
-        .userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36')
-        .open(config.rb.mainLoginLink)
-        .type('[name=user_login]', config.rb.login)
-        .type('[name=password]', config.rb.password)
-        .click('button.button')
-        .waitForNextPage()
-        .url().then((response)=>{
-            console.log('[Login] Auth URL: ', response);
+        console.log(1);
+        await browser.visit(config.rb.mainLoginLink).then( (e) => {
+            console.log(2);
+            if (e) return console.error(e);
         })
-        .cookies().then((response)=>{
-            response.forEach((el)=>{
-                if (el.name === "sbs_session") { cookie.sbs_session = el };
-                if (el.name === "XSRF-TOKEN") { cookie.XSRF_TOKEN = el };
-            })
-            return horseman.close();
+            console.log(3);
+        await browser.wait().then((window) => {
+            console.log(4);
+            return browser.window.document.querySelector('button.button');
         })
+        console.log(5);
+        await browser.fill('input[name=user_login]', config.rb.login)
+        console.log(6);
+        await browser.fill('input[name=password]', config.rb.password)
+        console.log(7);
+        try {
+            await browser.pressButton('button.button')
+        } catch (error) {
             
+        }
+        console.log(7.1);
+        await browser.wait().then( ()=> {
+            console.log(8);
+            console.info("[Login] Auth URL: ", browser.window.location.href);
+            if ("https://rb.sberbank-school.ru/" === browser.window.location.href){
+                cookie.sbs_session = browser.getCookie('sbs_session', true);
+                cookie.XSRF_TOKEN  = browser.getCookie('XSRF-TOKEN', true);
+                delete browser.cookies;
+                try {
+                    browser.tabs.closeAll();
+                } catch (error) { }
+            }
+            console.log(9);
+        } )
+        console.log(10);      
+            
+
         console.log('[Login] -> Complete');
     } catch (error) {
         console.log("[Login] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
+        //sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
     }
 }
 
-function makeRequestHeader() {
+function makeRequestHeader(baseAuth = false) {
+    // let header = {};
+    // if (baseAuth){
+    //     header = { 
+    //         credentials: "same-origin",
+    //         headers: {
+    //             Authorization: `Basic ${Buffer.from(config.rb.login + ":" + config.rb.password).toString('base64')}`
+    //         }
+    //     }
+    // }
     return { 
         credentials: "same-origin",
         headers: {
@@ -447,4 +476,4 @@ async function makeUpdateFolder() {
 }
 
 runParse();
-setInterval(runParse, config.interval);
+setInterval(runParse, config.interval)

@@ -4,13 +4,7 @@
 
 Запускать в фоне пока так: npm start или nohup node app.js> output.log &
 
-npm i phantomjs-prebuilt
-npm i node-horseman
-npm i fs
-npm i request
-npm i node-fetch
-npm i jsdom
-
+npm i zombie fs request node-fetch jsdom
 
 1) Проверяет наличие cookie. Если их нет или они просрочены то идет делать новые в login();
 2) Парсит список курсов с config.rb.coursesListLink
