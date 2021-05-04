@@ -4,6 +4,19 @@
 //TG - Telegram
 
 //var Horseman = require('node-horseman');
+var nock = require('nock');
+
+nock('https://www.google-analytics.com')
+  .get('/analytics.js')
+  .times(Math.Infinity)
+  .reply(200, '{}')
+
+  nock('https://mc.yandex.ru')
+  .get('/metrika/watch.js')
+  .times(Math.Infinity)
+  .reply(200, '{}')
+
+
 const Browser = require('zombie');
 const fs = require('fs').promises;
 const http = require('request');
@@ -12,9 +25,10 @@ const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
+
+
 Browser.silent = true;
 const browser = new Browser({userAgent: 'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko', waitFor: 10000});
-
 let messageSend = false;
 let cookie = {};
 
