@@ -3,21 +3,7 @@
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
 
-//var Horseman = require('node-horseman');
-var nock = require('nock');
-
-nock('https://www.google-analytics.com')
-  .get('/analytics.js')
-  .times(Math.Infinity)
-  .reply(200, '{}')
-
-  nock('https://mc.yandex.ru')
-  .get('/metrika/watch.js')
-  .times(Math.Infinity)
-  .reply(200, '{}')
-
-
-const Browser = require('zombie');
+var Horseman = require('node-horseman');
 const fs = require('fs').promises;
 const http = require('request');
 const config = require('./config.json');
@@ -25,10 +11,6 @@ const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
-
-
-Browser.silent = true;
-const browser = new Browser({userAgent: 'Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko', waitFor: 10000});
 let messageSend = false;
 let cookie = {};
 
@@ -36,7 +18,7 @@ let cookie = {};
 async function runParse() {
     try {
         console.log('Running...');
-
+        
         let nowDate = getDate();
 
         let oldSiteData = await getFileData(config.file.oldData);
@@ -81,7 +63,7 @@ async function runParse() {
 async function checkCookie() {
     console.log('[Auth] Check has cookie: ', cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN'));
     if(cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN')) {
-        let status = !((((cookie.sbs_session.expires * 1000) - (5 * 60)) - Date.now()) >= 0);
+        let status = !((((cookie.sbs_session.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
         console.log('[Auth] Check cookie expiration Date: ', status );
         if ( status ){
             console.log('[Auth] Get cookie process start');
@@ -171,31 +153,27 @@ async function getUpdateData(nowDate, type) {
 async function login() {
     try {
         console.log('[Login] -> Start');
-        await browser.visit(config.rb.mainLoginLink).then( (e) => {
-            if (e) return console.error(e);
-        })
-        await browser.wait().then((window) => {
-            return browser.window.document.querySelector('button.button');
-        })
-        await browser.fill('input[name=user_login]', config.rb.login)
-        await browser.fill('input[name=password]', config.rb.password)
-        try {
-            await browser.pressButton('button.button')
-        } catch (error) { }
 
-        await browser.wait().then( ()=> {
-            console.info("[Login] Auth URL: ", browser.window.location.href);
-            if ("https://rb.sberbank-school.ru/" === browser.window.location.href){
-                console.log(browser.getCookie('sbs_session', true));
-                cookie.sbs_session = browser.getCookie('sbs_session', true);
-                cookie.XSRF_TOKEN  = browser.getCookie('XSRF-TOKEN', true);
-                //delete browser.cookies;
-                try {
-                    browser.window.close();
-                } catch (error) { }
-            }
-        } )
+        let horseman = new Horseman({ timeout: 10000 });
 
+        await horseman
+        .userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36')
+        .open(config.rb.mainLoginLink)
+        .type('[name=login]', config.rb.login)
+        .type('[name=password]', config.rb.password)
+        .click('button.button')
+        .waitForSelector('a[href="https://auth.sberbank-school.ru?realm=rb"]')
+        .url().then((response)=>{
+            console.log('[Login] Auth URL: ', response);
+        })
+        .cookies().then((response)=>{
+            response.forEach((el)=>{
+                if (el.name === "sbs_session") { cookie.sbs_session = el };
+                if (el.name === "XSRF-TOKEN") { cookie.XSRF_TOKEN = el };
+            })
+            return horseman.close();
+        })
+            
         console.log('[Login] -> Complete');
     } catch (error) {
         console.log("[Login] -> Error");
@@ -204,16 +182,7 @@ async function login() {
     }
 }
 
-function makeRequestHeader(baseAuth = false) {
-    // let header = {};
-    // if (baseAuth){
-    //     header = { 
-    //         credentials: "same-origin",
-    //         headers: {
-    //             Authorization: `Basic ${Buffer.from(config.rb.login + ":" + config.rb.password).toString('base64')}`
-    //         }
-    //     }
-    // }
+function makeRequestHeader() {
     return { 
         credentials: "same-origin",
         headers: {
@@ -478,4 +447,4 @@ async function makeUpdateFolder() {
 }
 
 runParse();
-setInterval(runParse, config.interval)
+setInterval(runParse, config.interval);
