@@ -63,11 +63,12 @@ async function runParse() {
 async function checkCookie() {
     console.log('[Auth] Check has cookie: ', cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN'));
     if(cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN')) {
-        let status = !((((cookie.sbs_session.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
+        let status = !((((cookie.XSRF_TOKEN.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
         console.log('[Auth] Check cookie expiration Date: ', status );
         if ( status ){
             console.log('[Auth] Get cookie process start');
             await login();
+            
             console.log('[Auth] Done');
         } else {
             console.log('[Auth] Cookie Good');
