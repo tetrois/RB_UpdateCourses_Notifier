@@ -1,5 +1,5 @@
 {
-    "interval": "300000",
+    "interval": "30000",
     "telegram": {
       "token": "893111665:AAH8ITkQgb36--trJYEdtua2J7cp6ncowI8",
       "chatSupport": "-1001460774047",
@@ -11,7 +11,8 @@
     },
     "rb": {
         "mainLoginLink": "https://auth.sberbank-school.ru/login",
-        "coursesListLink": "https://rb.sberbank-school.ru/admin/courses?grid-1%5Bsort%5D%5Bname%5D=asc&grid-1%5Bper-page%5D=100",
+        "loginApiLink": "https://auth.sberbank-school.ru/api/login",
+        "coursesListLink": "https://rb.sberbank-school.ru/admin/courses?grid-1[sort][name]=asc&grid-1[per-page]=100&grid-1[page]=1",
         "coursesListApiLink": "https://rb.sberbank-school.ru/jsapi/backend/courses/",
         "login": "rb-support",
         "password": "GhbdtnKjifhbrb123",

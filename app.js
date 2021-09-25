@@ -6,13 +6,13 @@
 var Horseman = require('node-horseman');
 const fs = require('fs').promises;
 const http = require('request');
-const config = require('./config.json');
+const CONFIG = require('./config.json');
 const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
 let messageSend = false;
-let cookie = {};
+let authData = {};
 
 
 async function runParse() {
@@ -21,7 +21,7 @@ async function runParse() {
         
         let nowDate = getDate();
 
-        let oldSiteData = await getFileData(config.file.oldData);
+        let oldSiteData = await getFileData(CONFIG.file.oldData);
         let usedReleases = await getUpdateData(nowDate, "R");
         let usedExpress = await getUpdateData(nowDate, "E");
         makeUpdateFolder();
@@ -35,35 +35,35 @@ async function runParse() {
         writeData(siteData);
         createMessageCourses(newListCourses, messageSend);
 
-        //Механика релизов
-        let todayMigrationsR = await getDataRE(config.rb.idRelease, 'R', 'updates');
-        let todayReleasesNames = await getDataRE(config.rb.listReleaseLink, 'R', 'names');
+        // //Механика релизов
+        let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
+        let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
         let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
         createMessageRE(newReleases, 'R', messageSend);
 
-        //Механика экспрессов
-        let todayMigrationsE = await getDataRE(config.rb.idExpress, 'E', 'updates');
-        let todayExpressNames = await getDataRE(config.rb.listExpress, 'E', 'names');
+        // //Механика экспрессов
+        let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
+        let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
         let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
         
-        messageSend = true;
+        messageSend = false;
 
 
     } catch (error) {
         console.log("[Main] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, `runParse`), config.telegram.debugChat);
+        sendMessageTG(msgError(error, `runParse`), CONFIG.telegram.debugChat);
     } finally {
         console.log('All Complete');
-        sendMessageTG(['All%20Complete'], config.telegram.debugChat);
+        sendMessageTG(['All%20Complete'], CONFIG.telegram.debugChat);
     }
 };
 
 async function checkCookie() {
-    console.log('[Auth] Check has cookie: ', cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN'));
-    if(cookie.hasOwnProperty('sbs_session') && cookie.hasOwnProperty('XSRF_TOKEN')) {
-        let status = !((((cookie.XSRF_TOKEN.expiry * 1000) - (5 * 60)) - Date.now()) >= 0);
+    console.log('[Auth] Check has cookie: ', authData.hasOwnProperty('sbs_session') && authData.hasOwnProperty('XSRF_TOKEN'));
+    if(authData.hasOwnProperty('sbs_session') && authData.hasOwnProperty('XSRF_TOKEN')) {
+        let status = !((authData.expiry - Date.now()) >= 0);
         console.log('[Auth] Check cookie expiration Date: ', status );
         if ( status ){
             console.log('[Auth] Get cookie process start');
@@ -94,7 +94,7 @@ function getDate() {
         return nowDate;
     } catch (error) {
         console.error(error);
-        sendMessageTG(msgError(error, `getDate`), config.telegram.debugChat);
+        sendMessageTG(msgError(error, `getDate`), CONFIG.telegram.debugChat);
     }
 };
 
@@ -104,14 +104,14 @@ async function getFileData(fileName) {
         let fileData = await JSON.parse(await fs.readFile(fileName, 'utf8'));
         if (fileData === undefined) {
             messageSend = false;
-            sendMessageTG("sendMessageOff", config.telegram.debugChat);
+            sendMessageTG("sendMessageOff", CONFIG.telegram.debugChat);
         };
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
         console.log(`[Read Old Save Data] -> Error Read File ${fileName}. Using empty data.`);
         messageSend = false;
-        sendMessageTG(msgError(null, `Creating empty file ${fileName}`), config.telegram.debugChat);
+        sendMessageTG(msgError(null, `Creating empty file ${fileName}`), CONFIG.telegram.debugChat);
         return fileData = {}
     }
 };
@@ -123,18 +123,18 @@ async function writeDataRE(text, nowDate, type) {
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
-        sendMessageTG(msgError(error, "writeDataRE"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "writeDataRE"), CONFIG.telegram.debugChat);
     }
 }
 
 async function writeData(text) {
     try {
-        await fs.writeFile(config.file.oldData, JSON.stringify(text));
+        await fs.writeFile(CONFIG.file.oldData, JSON.stringify(text));
         console.log('[Save Data] -> Done');
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
-        sendMessageTG(msgError(error, "writeData"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "writeData"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -145,7 +145,7 @@ async function getUpdateData(nowDate, type) {
     } catch (error) {
         messageSend = false;
         console.log(`[Read ${type} Data] -> File used release not found. Will be using empty data.`);
-        sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), config.telegram.debugChat);
+        sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), CONFIG.telegram.debugChat);
         return data = { updates: {}, videorelease_id: {} };
     }
 }
@@ -155,49 +155,51 @@ async function login() {
     try {
         console.log('[Login] -> Start');
 
-        let horseman = new Horseman({ timeout: 10000 });
+        let initResponse = await getApiData(CONFIG.rb.mainLoginLink, true);
+        setAuthData(initResponse);
 
-        await horseman
-        .userAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.84 Safari/537.36')
-        .open(config.rb.mainLoginLink)
-        .type('[name=login]', config.rb.login)
-        .type('[name=password]', config.rb.password)
-        .click('button.button')
-        .waitForSelector('a[href="https://auth.sberbank-school.ru?realm=rb"]')
-        .url().then((response)=>{
-            console.log('[Login] Auth URL: ', response);
-        })
-        .cookies().then((response)=>{
-            response.forEach((el)=>{
-                if (el.name === "sbs_session") { cookie.sbs_session = el };
-                if (el.name === "XSRF-TOKEN") { cookie.XSRF_TOKEN = el };
-            })
-            return horseman.close();
-        })
-            
+        let authResponse = await getApiData(CONFIG.rb.loginApiLink, true, "json", "POST", `{"password":"${CONFIG.rb.password}","user_login":"${CONFIG.rb.login}"}`);
+        setAuthData(authResponse);
+
         console.log('[Login] -> Complete');
+            
     } catch (error) {
         console.log("[Login] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "login"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "login"), CONFIG.telegram.debugChat);
     }
 }
 
-function makeRequestHeader() {
-    return { 
-        credentials: "same-origin",
-        headers: {
-            cookie: `${cookie.sbs_session.name}=${cookie.sbs_session.value}; ${cookie.XSRF_TOKEN.name}=${cookie.XSRF_TOKEN.value};`
-        }
-    }
+function setAuthData(response) {
+    let cookie = response.headers.get('set-cookie');
+    let XSRF_TOKEN = cookie.match(/(?:(?:^|.*;\s*)XSRF-TOKEN\s*\=\s*([^;]*).*$)|^.*$/, "$1")[1];
+    let sbs_session = cookie.match(/(?:(?:^|.*,\s*)sbs_session\s*\=\s*([^;]*).*$)|^.*$/, "$1")[1];
+    let expiry = cookie.match(/(?:(?:^|.*;\s*)expires\s*\=\s*([^;]*).*$)|^.*$/)[1];
+    authData = {
+            cookie: decodeURIComponent(cookie),
+            XSRF_TOKEN: decodeURIComponent(XSRF_TOKEN),
+            expiry: Date.parse(expiry),
+            sbs_session: decodeURIComponent(sbs_session)
+    }            
+    return authData;
 }
 
-async function getApiData(link, typeReturn) {
+async function getApiData(link, returnResponse = false, typeReturn, method = "GET", body = null) {
     try {
-        let response = await fetch(link, makeRequestHeader());
-        //console.log(`[Get Api Data] -> Requset to ${link} ${response.status}`)
+        let response = await fetch(link, { 
+            headers: {
+                "accept": "*/*",
+                "content-type": "application/json;charset=UTF-8",
+                "x-xsrf-token": `${authData.XSRF_TOKEN}`,
+                "cookie": `XSRF-TOKEN=${authData.XSRF_TOKEN}; sbs_session=${authData.sbs_session}`
+            },
+            method: method,
+            body: body
+        });
+        console.log(`[Get Api Data] -> Requset to ${link} ${response.status}`)
         if (response.ok) {
             let data;
+            if (returnResponse) { return response };
             if (typeReturn === 'json') { data = await response.json() };
             if (typeReturn === 'text') { data = await response.text() };
             return data;
@@ -212,9 +214,16 @@ async function getApiData(link, typeReturn) {
 
 //List courses
 async function listCourses() {
+
+    //Ye;yj допилить функцию для вывода всех курсов (сейчас только 100)
+    // * Кол-во всех курсов узнать на странице с помощью document.querySelector('small').innerText.match(/\d*$/)[0]
+    // * Переход между страницами: добавить в конце url &grid-1[page]=1
+
+
+
     try {
         console.log('[List Courses] -> Start');
-        let siteData = await getApiData(config.rb.coursesListLink, 'text');
+        let siteData = await getApiData(CONFIG.rb.coursesListLink, false, 'text');
         const document  = (new JSDOM(siteData)).window.document;
         let mainTableStat = document.querySelector('table.table');
         let arrObjects = [];
@@ -237,7 +246,7 @@ async function listCourses() {
     } catch (error) {
         console.log("[List Courses] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "listCourses"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "listCourses"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -247,7 +256,7 @@ async function parseSiteData(siteData) {
         console.log("[Parse] -> Start"); 
                  
         var fn = async function delay(elem) {
-            let data = await getApiData(elem.idLink, 'json');
+            let data = await getApiData(elem.idLink, false, 'json');
             if (data.data.length !== 0) {
                 elem.id_update = data.data[0].id;
                 elem.date_update = data.data[0].attributes.updated_at;
@@ -261,7 +270,7 @@ async function parseSiteData(siteData) {
     } catch (error) {
         console.log("[Parse] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "parseSiteData"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "parseSiteData"), CONFIG.telegram.debugChat);
         return error;
     }
 }
@@ -272,14 +281,14 @@ async function getDataRE(linkNames, type, what) {
         //console.log(`[Parse ${type} ${what}] -> Start`);
         console.log(`[Parse ${type} ${what}] -> URL: ${linkNames}`);
         let listNames = [];
-        listNames = await getApiData(linkNames, 'json');
+        listNames = await getApiData(linkNames, false, 'json');
         console.log(`[Parse ${type} ${what}] -> Count Release: ${listNames.data.length}`);
         //console.log(`[Parse ${type} ${what}] -> Done`);
         return listNames;
     } catch (error) {
         console.log(`[Parse ${type} ${what}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, `getNamesRE`), config.telegram.debugChat);
+        sendMessageTG(msgError(error, `getNamesRE`), CONFIG.telegram.debugChat);
     }
 }
 
@@ -332,7 +341,7 @@ async function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate
     } catch (error) {
         console.log(`[Get Upd ${type}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, "getUpdatedRelease"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "getUpdatedRelease"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -356,7 +365,7 @@ function compareData(siteData, oldSiteData) {
         } else {
             console.log('[Compare] -> Add new course');
             messageSend = false;
-            sendMessageTG([`Add%20new%20course%20Total ${siteData.length}`], config.telegram.debugChat);
+            sendMessageTG([`Add%20new%20course%20Total ${siteData.length}`], CONFIG.telegram.debugChat);
             return siteData;
         }
         console.log('[Compare] -> Done');
@@ -364,7 +373,7 @@ function compareData(siteData, oldSiteData) {
     } catch (error) {
         console.log("[Compare] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "compareData"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "compareData"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -376,9 +385,9 @@ function createMessageCourses(newSiteData, send) {
             for (let h = 0; h < newSiteData.length; h++) {
                 msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}`);
             }
-            sendMessageTG(msg, config.telegram.chatSupport);
-            sendMessageTG(msg, config.telegram.rbHelp);
-            sendMessageTG([`New%20courses%20 ${newSiteData.length}`], config.telegram.debugChat);
+            sendMessageTG(msg, CONFIG.telegram.chatSupport);
+            sendMessageTG(msg, CONFIG.telegram.rbHelp);
+            sendMessageTG([`New%20courses%20 ${newSiteData.length}`], CONFIG.telegram.debugChat);
             console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
         }
         messageSend = true;
@@ -386,7 +395,7 @@ function createMessageCourses(newSiteData, send) {
     } catch (error) {
         console.log("[Create Message] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "createMessageCourses"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "createMessageCourses"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -404,9 +413,9 @@ function createMessageRE(newReleases, type, send) {
                 msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
             }
 //TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
-            sendMessageTG(msg, config.telegram.chatSupport);
-            sendMessageTG(msg, config.telegram.rbHelp);
-            sendMessageTG([`New%20${type}%20 ${msg.length}`], config.telegram.debugChat);
+            sendMessageTG(msg, CONFIG.telegram.chatSupport);
+            sendMessageTG(msg, CONFIG.telegram.rbHelp);
+            sendMessageTG([`New%20${type}%20 ${msg.length}`], CONFIG.telegram.debugChat);
             console.log(`[Create Message ${type}] -> Done. Count: ${msg.length}`);
         }
         //messageSend = true;
@@ -414,7 +423,7 @@ function createMessageRE(newReleases, type, send) {
     } catch (error) {
         console.log(`[Create Message ${type}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, "createMessageRE"), config.telegram.debugChat);
+        sendMessageTG(msgError(error, "createMessageRE"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -422,14 +431,14 @@ function sendMessageTG(message, chat) {
     //console.log("[Send Message] -> Start");
     try {
         for (let i = 0; i < message.length; i++) {
-           http.post(`https://api.telegram.org/bot${config.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+           http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
         }
 
         //console.log("[Send Message] -> Done");
     } catch (error) {
         console.log("[Send Message] -> Error");
         console.error(error);
-        //sendMessageTG(msgError(error, "sendMessageTG"), config.telegram.debugChat);
+        //sendMessageTG(msgError(error, "sendMessageTG"), CONFIG.telegram.debugChat);
     }
 }
 
@@ -448,4 +457,4 @@ async function makeUpdateFolder() {
 }
 
 runParse();
-setInterval(runParse, config.interval);
+setInterval(runParse, CONFIG.interval);
