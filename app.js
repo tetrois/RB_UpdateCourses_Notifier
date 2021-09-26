@@ -30,22 +30,22 @@ async function runParse() {
 
         //Механика курсов
         let siteData = await listCourses();
-        siteData = await parseSiteData(siteData);
-        let newListCourses = compareData(siteData, oldSiteData);
-        writeData(siteData);
-        createMessageCourses(newListCourses, messageSend);
+        // siteData = await parseSiteData(siteData);
+        // let newListCourses = compareData(siteData, oldSiteData);
+        // writeData(siteData);
+        // createMessageCourses(newListCourses, messageSend);
 
         // //Механика релизов
-        let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
-        let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
-        let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
-        createMessageRE(newReleases, 'R', messageSend);
+        // let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
+        // let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
+        // let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
+        // createMessageRE(newReleases, 'R', messageSend);
 
-        // //Механика экспрессов
-        let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
-        let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
-        let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
-        createMessageRE(newExpress, 'E', messageSend);
+        // // //Механика экспрессов
+        // let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
+        // let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
+        // let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
+        // createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = false;
 
@@ -215,34 +215,40 @@ async function getApiData(link, returnResponse = false, typeReturn, method = "GE
 //List courses
 async function listCourses() {
 
-    //Ye;yj допилить функцию для вывода всех курсов (сейчас только 100)
-    // * Кол-во всех курсов узнать на странице с помощью document.querySelector('small').innerText.match(/\d*$/)[0]
-    // * Переход между страницами: добавить в конце url &grid-1[page]=1
-
-
-
     try {
         console.log('[List Courses] -> Start');
-        let siteData = await getApiData(CONFIG.rb.coursesListLink, false, 'text');
-        const document  = (new JSDOM(siteData)).window.document;
-        let mainTableStat = document.querySelector('table.table');
-        let arrObjects = [];
-        for (let i = 1; i < mainTableStat.rows.length; i++) {
-            if ((mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && (mainTableStat.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
-                let cells_0 =  mainTableStat.rows[i].cells[0].children[0];
-                let cells_1 =  mainTableStat.rows[i].cells[1].textContent;
-                let course_id =  mainTableStat.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "");
+        let coursesData = [];
+        let siteData = await getApiData(CONFIG.rb.coursesListLink + '&grid-1[page]=1', false, 'text');
+        let document  = (new JSDOM(siteData)).window.document;
+        let coursesTable = document.querySelector('table.table');
+        function convertData(table){
+            for (let i = 1; i < table.rows.length; i++) {
+                if ((table.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && 
+                    (table.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
+                    let cells_0 =   table.rows[i].cells[0].children[0];
+                    let cells_1 =   table.rows[i].cells[1].textContent;
+                    let course_id = table.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "");
 
-                arrObjects[i-1] = {
-                    name: cells_0.textContent,
-                    id:   cells_1.substring( cells_1.lastIndexOf("/"), cells_1.length-5 ),
-                    idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${course_id}/migrations`,
-                    idCourse: course_id
+                    coursesData.push( {
+                        name: cells_0.textContent,
+                        id:   cells_1.substring( cells_1.lastIndexOf("/"), cells_1.length-5 ),
+                        idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${course_id}/migrations`,
+                        idCourse: course_id
+                    })
                 }
             }
-        }        
-        console.log('[List Courses] -> Complete, Total: ' + arrObjects.length);
-        return arrObjects;
+        }
+        convertData(coursesTable);
+        let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
+        for(let b=2; b <= Math.ceil(quantityCourses/100); b++){
+            let siteData = await getApiData(CONFIG.rb.coursesListLink + `&grid-1[page]=${b}`, false, 'text');
+            let document  = (new JSDOM(siteData)).window.document;
+            let coursesTable = document.querySelector('table.table');
+            convertData(coursesTable);
+        }
+
+        console.log('[List Courses] -> Complete, Total: ' + coursesData.length);
+        return coursesData;
     } catch (error) {
         console.log("[List Courses] -> Error");
         console.error(error);

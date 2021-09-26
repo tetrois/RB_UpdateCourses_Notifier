@@ -12,7 +12,7 @@
     "rb": {
         "mainLoginLink": "https://auth.sberbank-school.ru/login",
         "loginApiLink": "https://auth.sberbank-school.ru/api/login",
-        "coursesListLink": "https://rb.sberbank-school.ru/admin/courses?grid-1[sort][name]=asc&grid-1[per-page]=100&grid-1[page]=1",
+        "coursesListLink": "https://rb.sberbank-school.ru/admin/courses?grid-1[sort][name]=asc&grid-1[per-page]=100",
         "coursesListApiLink": "https://rb.sberbank-school.ru/jsapi/backend/courses/",
         "login": "rb-support",
         "password": "GhbdtnKjifhbrb123",
