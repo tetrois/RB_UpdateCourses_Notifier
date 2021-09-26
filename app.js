@@ -3,7 +3,6 @@
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
 
-var Horseman = require('node-horseman');
 const fs = require('fs').promises;
 const http = require('request');
 const CONFIG = require('./config.json');
@@ -30,22 +29,22 @@ async function runParse() {
 
         //Механика курсов
         let siteData = await listCourses();
-        // siteData = await parseSiteData(siteData);
-        // let newListCourses = compareData(siteData, oldSiteData);
-        // writeData(siteData);
-        // createMessageCourses(newListCourses, messageSend);
+        siteData = await parseSiteData(siteData);
+        let newListCourses = compareData(siteData, oldSiteData);
+        writeData(siteData);
+        createMessageCourses(newListCourses, messageSend);
 
-        // //Механика релизов
-        // let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
-        // let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
-        // let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
-        // createMessageRE(newReleases, 'R', messageSend);
+        //Механика релизов
+        let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
+        let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
+        let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
+        createMessageRE(newReleases, 'R', messageSend);
 
-        // // //Механика экспрессов
-        // let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
-        // let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
-        // let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
-        // createMessageRE(newExpress, 'E', messageSend);
+        //Механика экспрессов
+        let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
+        let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
+        let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
+        createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = false;
 
