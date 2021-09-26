@@ -46,7 +46,7 @@ async function runParse() {
         let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
         
-        messageSend = false;
+        messageSend = CONFIG.telegram.messageSend;
 
 
     } catch (error) {
