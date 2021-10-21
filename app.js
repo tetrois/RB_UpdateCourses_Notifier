@@ -392,7 +392,10 @@ function createMessageCourses(newSiteData, send) {
             }
             sendMessageTG(msg, CONFIG.telegram.chatSupport);
             sendMessageTG(msg, CONFIG.telegram.rbHelp);
-            sendMessageTG([`New%20courses%20 ${newSiteData.length}`], CONFIG.telegram.debugChat);
+
+            if(newSiteData.length > 0){
+                sendMessageTG([`New%20courses%20 ${newSiteData.length}`], CONFIG.telegram.debugChat);
+            }
             console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
         }
         messageSend = true;
@@ -420,7 +423,11 @@ function createMessageRE(newReleases, type, send) {
 //TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
             sendMessageTG(msg, CONFIG.telegram.chatSupport);
             sendMessageTG(msg, CONFIG.telegram.rbHelp);
-            sendMessageTG([`New%20${type}%20 ${msg.length}`], CONFIG.telegram.debugChat);
+
+            if(msg.length > 0){
+                sendMessageTG([`New%20${type}%20 ${msg.length}`], CONFIG.telegram.debugChat);
+            }
+
             console.log(`[Create Message ${type}] -> Done. Count: ${msg.length}`);
         }
         //messageSend = true;
@@ -435,9 +442,16 @@ function createMessageRE(newReleases, type, send) {
 function sendMessageTG(message, chat) {
     //console.log("[Send Message] -> Start");
     try {
-        for (let i = 0; i < message.length; i++) {
-           http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
-        }
+        let message_string = "";
+        message.forEach( el => {
+            message_string = `${message_string}\n\n${el}`;
+        });
+        http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string}`);
+
+
+        // for (let i = 0; i < message.length; i++) {
+        //    http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+        // }
 
         //console.log("[Send Message] -> Done");
     } catch (error) {
