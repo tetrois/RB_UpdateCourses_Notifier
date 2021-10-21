@@ -1,5 +1,4 @@
 /node_modules/*
 /updates_data
 output.log
-config.json
 .env

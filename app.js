@@ -9,11 +9,8 @@ const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
-const result = dotenv.config();
-if (result.error) {
-    throw result.error
-}
-const CONFIG = result.parsed;
+let CONFIG = {}
+
 let messageSend = false;
 let authData = {};
 
@@ -21,6 +18,13 @@ let authData = {};
 async function runParse() {
     try {
         console.log('Running...');
+        //Считываем данные с конфига .env
+        const result = dotenv.config();
+        if (result.error) {
+            throw result.error
+        }
+        CONFIG = result.parsed;
+        setTimeout(runParse, CONFIG.INTERVAL);
 
         let nowDate = getDate();
 
@@ -51,7 +55,6 @@ async function runParse() {
         createMessageRE(newExpress, 'E', messageSend);
         
         messageSend = CONFIG.TG_MESSAGE_SEND;
-
 
     } catch (error) {
         console.log("[Main] -> Error");
@@ -480,4 +483,3 @@ async function makeUpdateFolder() {
 }
 
 runParse();
-setInterval(runParse, CONFIG.INTERVAL);
