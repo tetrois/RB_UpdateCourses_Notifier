@@ -4,7 +4,7 @@
 
 Запускать в фоне пока так: npm start или nohup node app.js> output.log &
 
-npm i fs request node-fetch jsdom
+npm i fs request node-fetch jsdom dotenv
 
 1) Проверяет наличие cookie. Если их нет или они просрочены то идет делать новые в login();
 2) Парсит список курсов с config.rb.coursesListLink
