@@ -2,3 +2,4 @@
 /updates_data
 output.log
 config.json
+.env

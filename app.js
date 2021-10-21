@@ -2,14 +2,18 @@
 //E - Экспресс курсы
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
-
+const dotenv = require('dotenv');
 const fs = require('fs').promises;
 const http = require('request');
-const CONFIG = require('./config.json');
 const fetch = require('node-fetch');
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
+const result = dotenv.config();
+if (result.error) {
+    throw result.error
+}
+const CONFIG = result.parsed;
 let messageSend = false;
 let authData = {};
 
@@ -17,10 +21,10 @@ let authData = {};
 async function runParse() {
     try {
         console.log('Running...');
-        
+
         let nowDate = getDate();
 
-        let oldSiteData = await getFileData(CONFIG.file.oldData);
+        let oldSiteData = await getFileData(CONFIG.PATH_FILE_OLD_DATA);
         let usedReleases = await getUpdateData(nowDate, "R");
         let usedExpress = await getUpdateData(nowDate, "E");
         makeUpdateFolder();
@@ -35,27 +39,27 @@ async function runParse() {
         createMessageCourses(newListCourses, messageSend);
 
         //Механика релизов
-        let todayMigrationsR = await getDataRE(CONFIG.rb.idRelease, 'R', 'updates');
-        let todayReleasesNames = await getDataRE(CONFIG.rb.listReleaseLink, 'R', 'names');
+        let todayMigrationsR = await getDataRE(CONFIG.RB_API_ID_RELEASES_LINK, 'R', 'updates');
+        let todayReleasesNames = await getDataRE(CONFIG.RB_API_RELEASES_LINK, 'R', 'names');
         let newReleases = await getUpdatedRE(usedReleases, todayMigrationsR, todayReleasesNames, 'R', nowDate);
         createMessageRE(newReleases, 'R', messageSend);
 
         //Механика экспрессов
-        let todayMigrationsE = await getDataRE(CONFIG.rb.idExpress, 'E', 'updates');
-        let todayExpressNames = await getDataRE(CONFIG.rb.listExpress, 'E', 'names');
+        let todayMigrationsE = await getDataRE(CONFIG.RB_API_ID_EXPRESS_LINK, 'E', 'updates');
+        let todayExpressNames = await getDataRE(CONFIG.RB_API_EXPRESS_LINK, 'E', 'names');
         let newExpress = await getUpdatedRE(usedExpress, todayMigrationsE, todayExpressNames, 'E', nowDate);
         createMessageRE(newExpress, 'E', messageSend);
         
-        messageSend = CONFIG.telegram.messageSend;
+        messageSend = CONFIG.TG_MESSAGE_SEND;
 
 
     } catch (error) {
         console.log("[Main] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, `runParse`), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, `runParse`), CONFIG.TG_CHAT_DEBUG);
     } finally {
         console.log('All Complete');
-        sendMessageTG(['All%20Complete'], CONFIG.telegram.debugChat);
+        sendMessageTG(['All%20Complete'], CONFIG.TG_CHAT_DEBUG);
     }
 };
 
@@ -93,7 +97,7 @@ function getDate() {
         return nowDate;
     } catch (error) {
         console.error(error);
-        sendMessageTG(msgError(error, `getDate`), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, `getDate`), CONFIG.TG_CHAT_DEBUG);
     }
 };
 
@@ -103,14 +107,14 @@ async function getFileData(fileName) {
         let fileData = await JSON.parse(await fs.readFile(fileName, 'utf8'));
         if (fileData === undefined) {
             messageSend = false;
-            sendMessageTG("sendMessageOff", CONFIG.telegram.debugChat);
+            sendMessageTG("sendMessageOff", CONFIG.TG_CHAT_DEBUG);
         };
         console.log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
         console.log(`[Read Old Save Data] -> Error Read File ${fileName}. Using empty data.`);
         messageSend = false;
-        sendMessageTG(msgError(null, `Creating empty file ${fileName}`), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(null, `Creating empty file ${fileName}`), CONFIG.TG_CHAT_DEBUG);
         return fileData = {}
     }
 };
@@ -122,18 +126,18 @@ async function writeDataRE(text, nowDate, type) {
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
-        sendMessageTG(msgError(error, "writeDataRE"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "writeDataRE"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
 async function writeData(text) {
     try {
-        await fs.writeFile(CONFIG.file.oldData, JSON.stringify(text));
+        await fs.writeFile(CONFIG.PATH_FILE_OLD_DATA, JSON.stringify(text));
         console.log('[Save Data] -> Done');
     } catch (error) {
         console.log('[Save Data] -> Error: ');
         console.error(error);
-        sendMessageTG(msgError(error, "writeData"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "writeData"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -144,7 +148,7 @@ async function getUpdateData(nowDate, type) {
     } catch (error) {
         messageSend = false;
         console.log(`[Read ${type} Data] -> File used release not found. Will be using empty data.`);
-        sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), CONFIG.TG_CHAT_DEBUG);
         return data = { updates: {}, videorelease_id: {} };
     }
 }
@@ -154,10 +158,10 @@ async function login() {
     try {
         console.log('[Login] -> Start');
 
-        let initResponse = await getApiData(CONFIG.rb.mainLoginLink, true);
+        let initResponse = await getApiData(CONFIG.RB_LOGIN_LINK, true);
         setAuthData(initResponse);
 
-        let authResponse = await getApiData(CONFIG.rb.loginApiLink, true, "json", "POST", `{"password":"${CONFIG.rb.password}","user_login":"${CONFIG.rb.login}"}`);
+        let authResponse = await getApiData(CONFIG.RB_API_LOGIN_LINK, true, "json", "POST", `{"password":"${CONFIG.RB_AUTH_PASSWORD}","user_login":"${CONFIG.RB_AUTH_LOGIN}"}`);
         setAuthData(authResponse);
 
         console.log('[Login] -> Complete');
@@ -165,7 +169,7 @@ async function login() {
     } catch (error) {
         console.log("[Login] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "login"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "login"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -217,7 +221,7 @@ async function listCourses() {
     try {
         console.log('[List Courses] -> Start');
         let coursesData = [];
-        let siteData = await getApiData(CONFIG.rb.coursesListLink + '&grid-1[page]=1', false, 'text');
+        let siteData = await getApiData(CONFIG.RB_COURSES_LINK + '&grid-1[page]=1', false, 'text');
         let document  = (new JSDOM(siteData)).window.document;
         let coursesTable = document.querySelector('table.table');
         function convertData(table){
@@ -240,7 +244,7 @@ async function listCourses() {
         convertData(coursesTable);
         let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
         for(let b=2; b <= Math.ceil(quantityCourses/100); b++){
-            let siteData = await getApiData(CONFIG.rb.coursesListLink + `&grid-1[page]=${b}`, false, 'text');
+            let siteData = await getApiData(CONFIG.RB_COURSES_LINK + `&grid-1[page]=${b}`, false, 'text');
             let document  = (new JSDOM(siteData)).window.document;
             let coursesTable = document.querySelector('table.table');
             convertData(coursesTable);
@@ -251,7 +255,7 @@ async function listCourses() {
     } catch (error) {
         console.log("[List Courses] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "listCourses"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "listCourses"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -275,7 +279,7 @@ async function parseSiteData(siteData) {
     } catch (error) {
         console.log("[Parse] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "parseSiteData"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "parseSiteData"), CONFIG.TG_CHAT_DEBUG);
         return error;
     }
 }
@@ -293,7 +297,7 @@ async function getDataRE(linkNames, type, what) {
     } catch (error) {
         console.log(`[Parse ${type} ${what}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, `getNamesRE`), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, `getNamesRE`), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -346,7 +350,7 @@ async function getUpdatedRE(usedRE, allTodayUpdates, listAllNames, type, nowDate
     } catch (error) {
         console.log(`[Get Upd ${type}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, "getUpdatedRelease"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "getUpdatedRelease"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -370,7 +374,7 @@ function compareData(siteData, oldSiteData) {
         } else {
             console.log('[Compare] -> Add new course');
             messageSend = false;
-            sendMessageTG([`Add%20new%20course%20Total ${siteData.length}`], CONFIG.telegram.debugChat);
+            sendMessageTG([`Add%20new%20course%20Total ${siteData.length}`], CONFIG.TG_CHAT_DEBUG);
             return siteData;
         }
         console.log('[Compare] -> Done');
@@ -378,7 +382,7 @@ function compareData(siteData, oldSiteData) {
     } catch (error) {
         console.log("[Compare] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "compareData"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "compareData"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -390,11 +394,11 @@ function createMessageCourses(newSiteData, send) {
             for (let h = 0; h < newSiteData.length; h++) {
                 msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}`);
             }
-            sendMessageTG(msg, CONFIG.telegram.chatSupport);
-            sendMessageTG(msg, CONFIG.telegram.rbHelp);
+            sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
+            sendMessageTG(msg, CONFIG.TG_CHAT_RBHELP);
 
             if(newSiteData.length > 0){
-                sendMessageTG([`New%20courses%20 ${newSiteData.length}`], CONFIG.telegram.debugChat);
+                sendMessageTG([`New%20courses%20 ${newSiteData.length}`], CONFIG.TG_CHAT_DEBUG);
             }
             console.log(`[Create Message] -> Done. Count: ${newSiteData.length}`);
         }
@@ -403,7 +407,7 @@ function createMessageCourses(newSiteData, send) {
     } catch (error) {
         console.log("[Create Message] -> Error");
         console.error(error);
-        sendMessageTG(msgError(error, "createMessageCourses"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "createMessageCourses"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -421,11 +425,11 @@ function createMessageRE(newReleases, type, send) {
                 msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
             }
 //TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
-            sendMessageTG(msg, CONFIG.telegram.chatSupport);
-            sendMessageTG(msg, CONFIG.telegram.rbHelp);
+            sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
+            sendMessageTG(msg, CONFIG.TG_CHAT_RBHELP);
 
             if(msg.length > 0){
-                sendMessageTG([`New%20${type}%20 ${msg.length}`], CONFIG.telegram.debugChat);
+                sendMessageTG([`New%20${type}%20 ${msg.length}`], CONFIG.TG_CHAT_DEBUG);
             }
 
             console.log(`[Create Message ${type}] -> Done. Count: ${msg.length}`);
@@ -435,7 +439,7 @@ function createMessageRE(newReleases, type, send) {
     } catch (error) {
         console.log(`[Create Message ${type}] -> Error`);
         console.error(error);
-        sendMessageTG(msgError(error, "createMessageRE"), CONFIG.telegram.debugChat);
+        sendMessageTG(msgError(error, "createMessageRE"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -446,18 +450,18 @@ function sendMessageTG(message, chat) {
         message.forEach( el => {
             message_string = `${message_string}\n\n${el}`;
         });
-        http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string}`);
+        http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string}`);
 
 
         // for (let i = 0; i < message.length; i++) {
-        //    http.post(`https://api.telegram.org/bot${CONFIG.telegram.token}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
+        //    http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
         // }
 
         //console.log("[Send Message] -> Done");
     } catch (error) {
         console.log("[Send Message] -> Error");
         console.error(error);
-        //sendMessageTG(msgError(error, "sendMessageTG"), CONFIG.telegram.debugChat);
+        //sendMessageTG(msgError(error, "sendMessageTG"), CONFIG.TG_CHAT_DEBUG);
     }
 }
 
@@ -476,4 +480,4 @@ async function makeUpdateFolder() {
 }
 
 runParse();
-setInterval(runParse, CONFIG.interval);
+setInterval(runParse, CONFIG.INTERVAL);
