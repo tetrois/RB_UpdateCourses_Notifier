@@ -194,7 +194,7 @@ async function getApiData(link, returnResponse = false, typeReturn, method = "GE
     try {
         let response = await fetch(link, { 
             headers: {
-                "accept": "*/*",
+                "accept": "application/json, text/plain, */*",
                 "content-type": "application/json;charset=UTF-8",
                 "x-xsrf-token": `${authData.XSRF_TOKEN}`,
                 "cookie": `XSRF-TOKEN=${authData.XSRF_TOKEN}; sbs_session=${authData.sbs_session}`
