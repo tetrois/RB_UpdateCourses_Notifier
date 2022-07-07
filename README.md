@@ -2,7 +2,8 @@
 
 Парсер данных с сайта и отправка их в телеграм через бота.
 
-Запускать в фоне пока так: npm start или nohup node app.js> output.log &
+Запуск в фоне: pm2 start app.js
+Остановка: pm2 stop app.js
 
 npm i fs request node-fetch jsdom dotenv
 
