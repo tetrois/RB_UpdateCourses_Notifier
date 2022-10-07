@@ -479,7 +479,7 @@ function sendMessageTG(message, chat) {
         message.forEach( el => {
             message_string = `${message_string}\n\n${el}`;
         });
-        http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replaceAll('#', '%23')}`);
+        http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replace(/#/g, '%23')}`);
 
 
         // for (let i = 0; i < message.length; i++) {
