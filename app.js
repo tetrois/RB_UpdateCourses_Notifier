@@ -397,7 +397,7 @@ function createMessageCourses(newSiteData, send) {
             for (let h = 0; h < newSiteData.length; h++) {
                 msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}`);
             }
-            sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
+            //sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
             sendMessageTG(msg, CONFIG.TG_CHAT_RBHELP);
 
             if(newSiteData.length > 0){
@@ -428,7 +428,7 @@ function createMessageRE(newReleases, type, send) {
                 msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
             }
 //TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
-            sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
+           // sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
             sendMessageTG(msg, CONFIG.TG_CHAT_RBHELP);
 
             if(msg.length > 0){
