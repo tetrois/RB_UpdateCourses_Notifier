@@ -56,6 +56,19 @@ async function runParse() {
         
         messageSend = CONFIG.TG_MESSAGE_SEND;
 
+        //For clear RAM (test)
+        oldSiteData = null;
+        usedReleases = null;
+        usedExpress = null;
+        siteData = null;
+        newListCourses = null;
+        todayMigrationsR = null;
+        todayReleasesNames = null;
+        newReleases = null;
+        todayMigrationsE = null;
+        todayExpressNames = null;
+        newExpress = null;
+
     } catch (error) {
         debug_log("[Main] -> Error");
         console.error(error);
@@ -208,9 +221,11 @@ async function getApiData(link, returnResponse = false, typeReturn, method = "GE
             if (returnResponse) { return response };
             if (typeReturn === 'json') { data = await response.json() };
             if (typeReturn === 'text') { data = await response.text() };
+            response = null;
             return data;
         } else {
             debug_log(`[Get Api Data] -> Bad response from URL: ${link}  Status: ${response.status}`);
+            response = null;
         }
     } catch (error) {
         debug_log('Error get data ', error);
@@ -227,6 +242,12 @@ async function listCourses() {
         let siteData = await getApiData(CONFIG.RB_COURSES_LINK + '&grid-1[page]=1', false, 'text');
         let document  = (new JSDOM(siteData)).window.document;
         let coursesTable = document.querySelector('table.table');
+        let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
+
+        //For clear RAM (test)
+        document = null;
+        siteData = null;
+        
         function convertData(table){
             for (let i = 1; i < table.rows.length; i++) {
                 if ((table.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && 
@@ -245,11 +266,16 @@ async function listCourses() {
             }
         }
         convertData(coursesTable);
-        let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
+
         for(let b=2; b <= Math.ceil(quantityCourses/100); b++){
             let siteData = await getApiData(CONFIG.RB_COURSES_LINK + `&grid-1[page]=${b}`, false, 'text');
             let document  = (new JSDOM(siteData)).window.document;
             let coursesTable = document.querySelector('table.table');
+
+            //For clear RAM (test)
+            document = null;
+            siteData = null;
+
             convertData(coursesTable);
         }
 
