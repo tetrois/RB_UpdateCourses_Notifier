@@ -2,12 +2,10 @@
 //E - Экспресс курсы
 //RE - функционал относящийся и к релизам и к экспрессам
 //TG - Telegram
-const dotenv = require('dotenv');
-const fs = require('fs').promises;
-const http = require('request');
-const fetch = require('node-fetch');
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
+import * as dotenv from 'dotenv'
+import fs from 'fs-extra';
+import fetch from 'node-fetch';
+import { parseHTML } from 'linkedom';
 
 let CONFIG = {};
 
@@ -37,6 +35,7 @@ async function runParse() {
 
         //Механика курсов
         let siteData = await listCourses();
+        console.log(siteData);
         siteData = await parseSiteData(siteData);
         let newListCourses = compareData(siteData, oldSiteData);
         writeData(siteData);
@@ -128,10 +127,11 @@ async function getFileData(fileName) {
         debug_log(`[Read Old Save Data] -> File ${fileName} Read Good =)`);
         return fileData;
     } catch (error) {
+        let fileData = {};
         debug_log(`[Read Old Save Data] -> Error Read File ${fileName}. Using empty data.`);
         messageSend = false;
         sendMessageTG(msgError(null, `Creating empty file ${fileName}`), CONFIG.TG_CHAT_DEBUG);
-        return fileData = {}
+        return fileData;
     }
 };
 
@@ -160,12 +160,14 @@ async function writeData(text) {
 async function getUpdateData(nowDate, type) {
     try {
         await fs.access(`./updates_data/${type}${nowDate}.json`);
-        return data = await getFileData(`./updates_data/${type}${nowDate}.json`)
+        let data = await getFileData(`./updates_data/${type}${nowDate}.json`)
+        return data;
     } catch (error) {
+        let data = { updates: {}, videorelease_id: {} };
         messageSend = false;
         debug_log(`[Read ${type} Data] -> File used release not found. Will be using empty data.`);
         sendMessageTG(msgError(null, `Create empty file ./updates_data/${type}${nowDate}.json`), CONFIG.TG_CHAT_DEBUG);
-        return data = { updates: {}, videorelease_id: {} };
+        return data;
     }
 }
 
@@ -240,25 +242,33 @@ async function listCourses() {
         debug_log('[List Courses] -> Start');
         let coursesData = [];
         let siteData = await getApiData(CONFIG.RB_COURSES_LINK + '&grid-1[page]=1', false, 'text');
-        let document  = (new JSDOM(siteData)).window.document;
+        
+        const { document } = parseHTML(siteData);
+        
         let coursesTable = document.querySelector('table.table');
         let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
+        
 
         //For clear RAM (test)
-        document = null;
+        //document = null;
         siteData = null;
         
         function convertData(table){
-            for (let i = 1; i < table.rows.length; i++) {
-                if ((table.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Видеорелизов") !== 0) && 
-                    (table.rows[i].cells[0].children[0].textContent.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
-                    let cells_0 =   table.rows[i].cells[0].children[0];
-                    let cells_1 =   table.rows[i].cells[1].textContent;
-                    let course_id = table.rows[i].cells[2].querySelector('a').pathname.replace(/\D+/g, "");
+            const totalRows = table.querySelectorAll('tr');
+            for (let i = 1; i < totalRows.length; i++) {
+                const cells = totalRows[i].querySelectorAll('td');
+
+
+                const name = cells[0].children[0].textContent;
+                const id = cells[1].textContent;
+                const course_id = cells[2].querySelector('a').href.replace(/\D+/g, "");
+
+                if ((name.indexOf("Основной курс для Видеорелизов") !== 0) && 
+                    (name.indexOf("Основной курс для Экспресс-Обучения") !== 0)) {
 
                     coursesData.push( {
-                        name: cells_0.textContent,
-                        id:   cells_1.substring( cells_1.lastIndexOf("/"), cells_1.length-5 ),
+                        name: name,
+                        id:   id.substring( id.lastIndexOf("/"), id.length-5 ),
                         idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${course_id}/migrations`,
                         idCourse: course_id
                     })
@@ -269,11 +279,9 @@ async function listCourses() {
 
         for(let b=2; b <= Math.ceil(quantityCourses/100); b++){
             let siteData = await getApiData(CONFIG.RB_COURSES_LINK + `&grid-1[page]=${b}`, false, 'text');
-            let document  = (new JSDOM(siteData)).window.document;
-            let coursesTable = document.querySelector('table.table');
+            const { document } = parseHTML(siteData);
+            const coursesTable = document.querySelector('table.table');
 
-            //For clear RAM (test)
-            document = null;
             siteData = null;
 
             convertData(coursesTable);
@@ -479,12 +487,7 @@ function sendMessageTG(message, chat) {
         message.forEach( el => {
             message_string = `${message_string}\n\n${el}`;
         });
-        http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replace(/#/g, '%23')}`);
-
-
-        // for (let i = 0; i < message.length; i++) {
-        //    http.post(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message[i]}`);
-        // }
+        fetch(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replace(/#/g, '%23')}`, {method: 'POST'});
 
         //debug_log("[Send Message] -> Done");
     } catch (error) {

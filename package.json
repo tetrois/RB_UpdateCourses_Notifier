@@ -4,7 +4,7 @@
   "description": "Парсер данных с сайта и отправка их в телеграм через бота.",
   "main": "app.js",
   "scripts": {
-    "start": "nohup node app.js> output.log &"
+    "start": "pm2 start app.js -o '/dev/null' -e '/dev/null'"
   },
   "repository": {
     "type": "git",
@@ -17,11 +17,10 @@
   },
   "homepage": "https://github.com/tetrois/RB_UpdateCourses_Notifier#readme",
   "dependencies": {
-    "dotenv": "^10.0.0",
-    "fs": "^0.0.1-security",
-    "jsdom": "^16.7.0",
-    "node-fetch": "^2.6.7",
-    "pm2": "^5.2.0",
-    "request": "^2.88.2"
-  }
+    "dotenv": "^16.0.3",
+    "fs-extra": "^11.1.0",
+    "linkedom": "^0.14.25",
+    "node-fetch": "^3.3.1"
+  },
+  "type": "module"
 }
