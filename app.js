@@ -35,7 +35,6 @@ async function runParse() {
 
         //Механика курсов
         let siteData = await listCourses();
-        console.log(siteData);
         siteData = await parseSiteData(siteData);
         let newListCourses = compareData(siteData, oldSiteData);
         writeData(siteData);
@@ -243,14 +242,11 @@ async function listCourses() {
         let coursesData = [];
         let siteData = await getApiData(CONFIG.RB_COURSES_LINK + '&grid-1[page]=1', false, 'text');
         
-        const { document } = parseHTML(siteData);
-        
+        let { document } = parseHTML(siteData);
         let coursesTable = document.querySelector('table.table');
         let quantityCourses = document.querySelector('small').textContent.match(/\d*$/)[0];
         
-
-        //For clear RAM (test)
-        //document = null;
+        document = null;
         siteData = null;
         
         function convertData(table){
@@ -269,7 +265,7 @@ async function listCourses() {
                     coursesData.push( {
                         name: name,
                         id:   id.substring( id.lastIndexOf("/"), id.length-5 ),
-                        idLink: `https://rb.sberbank-school.ru/jsapi/backend/courses/${course_id}/migrations`,
+                        idLink: `https://rb.sberuniversity.online/jsapi/backend/courses/${course_id}/migrations`,
                         idCourse: course_id
                     })
                 }
@@ -279,12 +275,14 @@ async function listCourses() {
 
         for(let b=2; b <= Math.ceil(quantityCourses/100); b++){
             let siteData = await getApiData(CONFIG.RB_COURSES_LINK + `&grid-1[page]=${b}`, false, 'text');
-            const { document } = parseHTML(siteData);
-            const coursesTable = document.querySelector('table.table');
+            let { document } = parseHTML(siteData);
+            let coursesTable = document.querySelector('table.table');
 
+            document = null;
             siteData = null;
 
             convertData(coursesTable);
+            coursesTable = null;
         }
 
         debug_log('[List Courses] -> Complete, Total: ' + coursesData.length);
@@ -300,17 +298,14 @@ async function listCourses() {
 async function parseSiteData(siteData) {
     try {
         debug_log("[Parse] -> Start"); 
-                 
-        var fn = async function delay(elem) {
-            let data = await getApiData(elem.idLink, false, 'json');
+        
+        for(let i=0; i < siteData.length; i++) {
+            let data = await getApiData(siteData[i].idLink, false, 'json');
             if (data.data.length !== 0) {
-                elem.id_update = data.data[0].id;
-                elem.date_update = data.data[0].attributes.updated_at;
+                siteData[i].id_update = data.data[0].id;
+                siteData[i].date_update = data.data[0].attributes.updated_at;
             }
         }
-        
-        let actions = siteData.map(fn);
-        await Promise.all(actions);
         debug_log("[Parse] -> Done");
         return siteData;
     } catch (error) {
