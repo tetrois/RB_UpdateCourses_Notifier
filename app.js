@@ -475,14 +475,15 @@ function createMessageRE(newReleases, type, send) {
     }
 }
 
-function sendMessageTG(message, chat) {
+async function sendMessageTG(message, chat) {
     //debug_log("[Send Message] -> Start");
     try {
         let message_string = "";
         message.forEach( el => {
             message_string = `${message_string}\n\n${el}`;
         });
-        fetch(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replace(/#/g, '%23')}`, {method: 'POST'});
+	console.log(message_string);
+      	await fetch(`https://api.telegram.org/bot${CONFIG.TG_TOKEN}/sendMessage?chat_id=${chat}&parse_mode=html&text=${message_string.replace(/#/g, '%23')}`);
 
         //debug_log("[Send Message] -> Done");
     } catch (error) {
