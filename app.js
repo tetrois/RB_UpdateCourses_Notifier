@@ -424,7 +424,7 @@ function createMessageCourses(newSiteData, send) {
         let msg = [];
         if (send) {
             for (let h = 0; h < newSiteData.length; h++) {
-                msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}`);
+                msg[h] = `%23${newSiteData[h].id.slice(1)}` + encodeURI(`\n${newSiteData[h].name}\n`) + "%23update " +encodeURI(` ${newSiteData[h].date_update}\n\n`);
             }
             //sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
             sendMessageTG(msg, CONFIG.TG_CHAT_RBHELP);
@@ -454,7 +454,7 @@ function createMessageRE(newReleases, type, send) {
         if (send) {
             let i = 0;
             for (let key in newReleases) {
-                msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}`);
+                msg[i++] = `%23${typeCourse}` + encodeURI(`\n${newReleases[key].name}\n`) + "%23update " +encodeURI(` ${newReleases[key].crated_at}\n\n`);
             }
 //TODO Запилить функцию по отправке сообщений на несколько чатов, чтоб не городить эти функции
            // sendMessageTG(msg, CONFIG.TG_CHAT_SUPPORT);
@@ -508,7 +508,7 @@ async function makeUpdateFolder() {
 }
 
 function debug_log() {
-    if ( CONFIG.DEBUG === "true" ) { //shit code
+    if ( CONFIG.DEBUG === "true" ) {
         console.log.apply(this, arguments);
     }
 }
